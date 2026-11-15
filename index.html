@@ -1,0 +1,620 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://accounts.google.com; img-src 'self' data: blob: https://*.googleusercontent.com https://*.google.com https://*.gstatic.com; connect-src https://*.googleapis.com https://accounts.google.com https://*.googleusercontent.com; frame-src https://accounts.google.com; media-src blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#10243a">
+<title>Forever Cell · Reparaciones</title>
+<style>
+*{box-sizing:border-box;touch-action:manipulation}body{margin:0;font-family:system-ui,Arial,sans-serif;background:#f2f6fb;color:#172536}
+header{background:#10243a;color:#fff;padding:16px;padding-top:calc(16px + env(safe-area-inset-top));font-weight:800;font-size:19px;position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px}#ht{flex:1}#hl{height:34px;border-radius:6px;display:none}
+#hb{background:#ffffff26;border:0;color:#fff;border-radius:8px;padding:6px 10px;font-size:16px}
+main{padding:12px 12px 90px;max-width:640px;margin:auto}.card{background:#fff;border-radius:14px;padding:14px;margin-bottom:12px;border:1px solid #dce5ee}
+label{display:block;font-size:12px;font-weight:700;margin:10px 0 4px;color:#43566b}
+input,textarea,select{width:100%;font:inherit;padding:11px;border:1px solid #cbd7e3;border-radius:9px;background:#fff;color:#172536}
+textarea{min-height:70px}.btn{display:block;width:100%;border:0;border-radius:10px;padding:13px;font-weight:700;font-size:15px;background:#1769aa;color:#fff;margin-top:10px;text-align:center;text-decoration:none}
+.btn.s{background:#e4edf6;color:#10243a}.btn.g{background:#16845b}.btn.r{background:#b93838}.btn.m{padding:12px 4px;font-size:13px}.btn:disabled{opacity:.6}.row{display:flex;gap:8px}.row>*{flex:1}
+.ph{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}.ph img{width:100%;height:90px;object-fit:cover;border-radius:8px;background:#e6edf4}.ph div{position:relative}
+.x{position:absolute;top:3px;right:3px;background:#c0392b;color:#fff;border-radius:50%;width:24px;height:24px;text-align:center;line-height:24px;font-size:13px}
+.it{padding:12px;border-bottom:1px solid #e6edf4}.b{font-size:11px;background:#e8f1fb;border-radius:20px;padding:3px 8px;font-weight:700}
+.rest{background:#f4f8fc;padding:12px;border-radius:10px;font-weight:800;margin-top:10px}#msg{font-weight:700;color:#1769aa;margin-top:10px}
+nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #dce5ee;display:none;padding-bottom:env(safe-area-inset-bottom);z-index:5}
+nav button{flex:1;border:0;background:none;padding:8px 2px;font-size:11px;font-weight:700;color:#43566b}nav button.on{color:#1769aa;background:#e8f1fb}nav small{display:block;font-weight:400}
+.login{text-align:center;padding:26px 18px;margin-top:24px}.login .lg{width:104px;height:104px;object-fit:contain;border-radius:20px}.login h2{margin:14px 0 4px}.login p{color:#637386;margin:0 0 20px}
+.gbtn{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;padding:12px 14px;border:1px solid #747775;border-radius:24px;background:#fff;color:#1f1f1f;font:600 15px system-ui,Arial,sans-serif}.gbtn svg{width:20px;height:20px;flex:none}
+.peq{font-size:12px;color:#637386;line-height:1.5}.peq a,.aj a{color:#1769aa;word-break:break-all}.aj p{margin:6px 0}.aj h3{margin:0 0 6px;font-size:16px}
+#toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:#1f2937;color:#fff;padding:10px 16px;border-radius:20px;font-size:14px;z-index:300;display:none;max-width:90%;text-align:center}
+@media print{html{background:#fff}header,nav,.noprint,#toast{display:none!important}body{background:#fff}main{padding:0;max-width:none}.card{border:0;padding:0}}
+</style></head><body>
+<header><img id="hl" alt=""><span id="ht">Forever Cell</span><button id="hb" onclick="ajustes()" aria-label="Ajustes">⚙️</button></header>
+<main id="app"></main><nav id="nav"></nav><div id="toast"></div>
+<script>
+// =====================================================================
+//  FOREVER CELL · Control de reparaciones
+//  Todo se guarda en el Google Drive / Google Sheets de la cuenta que
+//  inicia sesión. Ya no usa Apps Script.
+// =====================================================================
+// ===== CONFIGURACIÓN (lo único que podrías cambiar) =====
+const APP='Forever Cell';
+const TALLER='Forevercell garantía 15 dias';   // nombre por defecto; se cambia en ⚙️ Ajustes
+const LADA='52';                               // código de país para WhatsApp/SMS (52 = México)
+const CLIENT_ID_FIJO='';                       // SOLO para usarla en navegador web: ID de cliente "Aplicación web" de Google Cloud. El APK no lo necesita.
+// ========================================================
+const HOJA='Reparaciones - Órdenes',PEST='Ordenes',PCONF='Config',CARPETA='Reparaciones';
+const SCOPES=['https://www.googleapis.com/auth/drive','https://www.googleapis.com/auth/userinfo.email'];
+// Columnas de la hoja: idénticas al Code.gs (A:W). "accesorios" y "clave" se repiten a propósito: así quedó la hoja y se escriben en ambas.
+const H=['id','token','fecha','cliente','ref1','ref2','equipo','falla','accesorios','clave','total','anticipo','estado','folder','pdf','fotosIn','fotosOut','notasEntrega','fechaEntrega','accesorios','clave','ticket','patron'];
+const NC=H.length;
+const LIM={cliente:100,ref1:30,ref2:30,equipo:100,falla:600,accesorios:400,clave:60,notasEntrega:600};
+const EC={'Recibido':'#0b5cad','En reparación':'#b35900','Listo para entregar':'#6a1b9a','Entregado':'#0a7a3d','Cancelado':'#c00000'};
+const ST=['Recibido','En reparación','Listo para entregar','Entregado','Cancelado'],IC=['📥','🔧','✅','📦','🚫'];
+const KS=['cliente','ref1','ref2','equipo','falla','accesorios','clave','total','anticipo','estado','notasEntrega'];
+const LOGO_APP='data:image/png;base64,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';
+const GSVG='<svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>';
+
+// ===== Utilidades =====
+const AND=window.ForeverCellAndroid||null;   // puente con el APK (si existe)
+const $=s=>document.querySelector(s);
+const E=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const qe=encodeURIComponent;
+const js=s=>{try{const a=JSON.parse(s||'[]');return Array.isArray(a)?a.filter(Boolean):[]}catch(e){return[]}};
+const ls={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
+const cl=(s,n)=>String(s??'').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'').slice(0,n);
+const mny=x=>{const n=parseFloat(x);return isFinite(n)&&n>=0&&n<1e7?String(Math.round(n*100)/100):'0'};
+const uuid=()=>Array.from(crypto.getRandomValues(new Uint8Array(16)),b=>b.toString(16).padStart(2,'0')).join('');
+function ahora(f){const d=new Date(),p=x=>String(x).padStart(2,'0'),Y=d.getFullYear(),Mo=p(d.getMonth()+1),D=p(d.getDate()),h=p(d.getHours()),mi=p(d.getMinutes()),s=p(d.getSeconds());
+ if(f==='yyyyMMdd_HHmm')return `${Y}${Mo}${D}_${h}${mi}`;if(f==='yyyyMMdd_HHmmss')return `${Y}${Mo}${D}_${h}${mi}${s}`;return `${D}/${Mo}/${Y} ${h}:${mi}`}
+const serialAFecha=n=>{const d=new Date(Math.round((n-25569)*864e5)),p=x=>String(x).padStart(2,'0');return `${p(d.getUTCDate())}/${p(d.getUTCMonth()+1)}/${d.getUTCFullYear()} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`};
+const pf=s=>{const m=String(s||'').match(/(\d+)\/(\d+)\/(\d+)/);return m?new Date(+m[3],m[2]-1,+m[1]).getTime():0};
+const b64=b=>new Promise((ok,no)=>{const r=new FileReader;r.onload=()=>ok(String(r.result).split(',')[1]);r.onerror=no;r.readAsDataURL(b)});
+const aDataURL=b=>new Promise((ok,no)=>{const r=new FileReader;r.onload=()=>ok(String(r.result));r.onerror=no;r.readAsDataURL(b)});
+const deDataURL=u=>{const[h,d]=u.split(','),bin=atob(d),a=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);return new Blob([a],{type:(h.match(/data:([^;]+)/)||[])[1]||'application/octet-stream'})};
+let TT=null;function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';clearTimeout(TT);TT=setTimeout(()=>e.style.display='none',3500)}
+function aviso(t){if(AND){try{AND.aviso(String(t));return}catch(e){}}toast(t)}
+function abrirUrl(u){u=String(u);if(AND){AND.abrir(u);return}if(/^https?:/.test(u))window.open(u,'_blank');else location.href=u}
+function imprimir(){if(AND)AND.imprimir();else window.print()}
+if(AND){window.open=u=>{AND.abrir(String(u||''));return null};window.print=()=>AND.imprimir()}
+
+// ===== Versión automática (cambia sola cuando subes un index.html nuevo a GitHub) =====
+const VER=(s=>{let h=5381;for(let i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))|0;return(h>>>0).toString(36).toUpperCase()})(document.currentScript?document.currentScript.textContent:'');
+const ORIGEN=/github\.io$/i.test(location.hostname)?'desde GitHub':location.hostname==='appassets.androidplatform.net'?'copia interna':'navegador';
+
+// ===== Estado =====
+let EMAIL=ls.get('email',''),TOK=ls.get('tok',{t:'',exp:0});
+const K=k=>k+':'+EMAIL;
+let SS='',SHID=null,CONFID=null,ROWCOUNT=0,ULTIMA=1,ROOT='',RC=[],YA_CONF=false,INFO={hojas:0};
+let SN=0,CFG={},LG='',dirty=false,VIEW=0,FIL='',O={},NEW={in:[],out:[]},R=[],PS=[],STM=null,INTER=false;
+function cargarCuenta(){R=ls.get(K('lst'),[]);CFG=ls.get(K('cfg'),{});SS='';SHID=null;CONFID=null;ROOT='';RC=[];YA_CONF=false;for(const k in METAF)delete METAF[k];hdr()}
+const cache=()=>ls.set(K('lst'),R);
+
+// =====================================================================
+//  INICIO DE SESIÓN (Android nativo o Google Identity Services en web)
+// =====================================================================
+const PEND={};let NREQ=0,TOKP=null;
+window.gxNativo=(id,token,err)=>{const p=PEND[id];if(!p)return;delete PEND[id];if(err)p.no(new Error(errAndroid(String(err))));else p.ok(String(token||''))};
+function errAndroid(e){
+ if(/^10\b|^10:|DEVELOPER_ERROR/.test(e))return 'Google rechazó la app (código 10): falta el cliente Android en Google Cloud o la huella SHA-1 no coincide.';
+ if(/^16\b|^16:|12501|cancel/i.test(e))return 'Se cerró la ventana de inicio de sesión. Toca el botón para intentarlo otra vez.';
+ if(/^7\b|^7:|NETWORK/i.test(e))return 'Sin internet. Revisa tu conexión e intenta de nuevo.';
+ return 'No se pudo iniciar sesión: '+e}
+function tokenAndroid(viejo){return new Promise((ok,no)=>{const id='t'+(++NREQ)+'_'+Date.now();PEND[id]={ok,no};try{AND.pedirToken(id,viejo||'')}catch(e){delete PEND[id];no(e)}})}
+function cargarGIS(){return new Promise((ok,no)=>{if(window.google&&google.accounts&&google.accounts.oauth2)return ok();const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';s.onload=()=>ok();s.onerror=()=>no(new Error('No se pudo cargar el inicio de sesión de Google. Revisa tu internet.'));document.head.appendChild(s)})}
+async function tokenWeb(){
+ if(!CLIENT_ID_FIJO)throw new Error('Para usar la versión web falta poner CLIENT_ID_FIJO en index.html. (El APK no lo necesita.)');
+ await cargarGIS();
+ return new Promise((ok,no)=>{const c=google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID_FIJO,scope:SCOPES.join(' '),hint:EMAIL||undefined,
+  callback:r=>r&&r.access_token?ok(r):no(new Error((r&&(r.error_description||r.error))||'Inicio de sesión cancelado')),
+  error_callback:e=>no(new Error(e&&e.type==='popup_closed'?'Se cerró la ventana de inicio de sesión.':e&&e.type==='popup_failed_to_open'?'El navegador bloqueó la ventana de Google. Permite ventanas emergentes.':'No se pudo iniciar sesión.'))});
+  c.requestAccessToken({prompt:''})})}
+async function getToken(forzar){
+ if(!forzar&&TOK.t&&Date.now()<TOK.exp-60e3)return TOK.t;
+ if(TOKP)return TOKP;
+ TOKP=(async()=>{try{
+  if(AND){const t=await tokenAndroid(forzar?TOK.t:'');if(!t)throw new Error('Google no entregó el acceso. Intenta de nuevo.');TOK={t,exp:Date.now()+50*60e3}}
+  else{if(!INTER&&EMAIL&&TOK.t)throw new Error('SESION');const r=await tokenWeb();TOK={t:r.access_token,exp:Date.now()+(+r.expires_in||3600)*1000}}
+  ls.set('tok',TOK);return TOK.t}finally{TOKP=null}})();
+ return TOKP}
+
+// =====================================================================
+//  LLAMADAS A GOOGLE (reintentos, token nuevo si vence, errores en español)
+// =====================================================================
+const GA='https://www.googleapis.com/',SH='https://sheets.googleapis.com/v4/spreadsheets/',DR=GA+'drive/v3/files',UP=GA+'upload/drive/v3/files';
+const post=(b,m)=>({method:m||'POST',headers:{'Content-Type':'application/json; charset=UTF-8'},body:JSON.stringify(b)});
+async function g(url,opt,crudo){opt=opt||{};let re401=false;
+ for(let i=0;;i++){
+  const t=await getToken();let r;
+  try{r=await fetch(url,Object.assign({},opt,{headers:Object.assign({},opt.headers||{},{Authorization:'Bearer '+t})}))}
+  catch(e){if(i<2){await sleep(1200*(i+1));continue}throw new Error(navigator.onLine===false?'Sin internet. Revisa tu conexión.':'No se pudo conectar con Google. Revisa tu internet e intenta de nuevo.')}
+  if(r.status===401&&!re401){re401=true;TOK.exp=0;await getToken(true);i--;continue}
+  if((r.status===429||r.status>=500)&&i<4){await sleep(700*2**i+Math.random()*300);continue}
+  if(!r.ok)throw new Error(await errGoogle(r));
+  if(crudo)return r;
+  if(r.status===204)return null;
+  const tx=await r.text();return tx?JSON.parse(tx):null}}
+async function errGoogle(r){let j={};try{j=await r.json()}catch(e){}const e=j.error||{},m=String(e.message||e.status||''),d=JSON.stringify(e.details||e.errors||'');
+ if(/has not been used|is disabled|SERVICE_DISABLED|accessNotConfigured/i.test(m+d))return 'La '+(/sheets/i.test(m+d+r.url)?'Google Sheets API':'Google Drive API')+' no está habilitada en tu proyecto de Google Cloud. Entra a "APIs y servicios" → "Biblioteca" y actívala.';
+ if(r.status===403&&/insufficient|SCOPE/i.test(m+d))return 'Falta el permiso de Google Drive. En ⚙️ Ajustes toca "Cerrar sesión" y vuelve a entrar aceptando todos los permisos.';
+ if(r.status===404)return 'No se encontró el archivo en tu Drive (¿se borró o es de otra cuenta?).';
+ if(r.status===401)return 'Tu sesión de Google venció. Vuelve a iniciar sesión.';
+ if(r.status===403)return 'Google negó el acceso: '+(m||r.status);
+ return 'Error de Google ('+r.status+'): '+(m||'intenta de nuevo')}
+
+// ===== Cola de escrituras (una a la vez) y función única api() =====
+let COLA=Promise.resolve();
+function gxPost(body){const fn=typeof body==='function'?body:()=>ESC[body.f](...(body.a||[]));const p=COLA.then(fn);COLA=p.catch(()=>{});return p}
+function gxLeer(q){return LEC[q.f](...(q.a||[]))}
+function api(body,q){return body?gxPost(body):gxLeer(q)}
+const run=(f,...a)=>f==='foto'?foto(...a):LEC[f]?api(null,{f,a}):api({f,a});
+
+// =====================================================================
+//  HOJA DE CÁLCULO (lo mismo que hacía Code.gs)
+// =====================================================================
+const rango=a=>qe(`'${PEST}'!${a}`);
+const col=j=>String.fromCharCode(65+j);
+const hojaMeta=id=>g(SH+id+'?fields='+qe('spreadsheetId,properties.title,sheets.properties(sheetId,title,gridProperties)'));
+const fmtTexto=shid=>({repeatCell:{range:{sheetId:shid,startColumnIndex:0,endColumnIndex:NC},cell:{userEnteredFormat:{numberFormat:{type:'TEXT'}}},fields:'userEnteredFormat.numberFormat'}});
+async function crearHoja(){
+ const s=await g(SH.slice(0,-1),post({properties:{title:HOJA},sheets:[{properties:{title:PEST}}]}));
+ await g(SH+s.spreadsheetId+':batchUpdate',post({requests:[fmtTexto(s.sheets[0].properties.sheetId)]}));
+ await g(SH+s.spreadsheetId+'/values/'+qe(`'${PEST}'!A1:W1`)+'?valueInputOption=RAW',post({values:[H]},'PUT'));
+ return s.spreadsheetId}
+// Busca la hoja que ya existe en tu Drive (por nombre, dueño "yo"); solo la crea si no existe.
+async function prepararHoja(){
+ let id=ls.get(K('ss'),''),meta=null;
+ if(id){try{meta=await hojaMeta(id)}catch(e){if(!/No se encontró|negó/.test(e.message))throw e;id=''}}
+ if(!id){const r=await g(DR+'?q='+qe(`name='${HOJA}' and mimeType='application/vnd.google-apps.spreadsheet' and 'me' in owners and trashed=false`)+'&orderBy=modifiedTime desc&pageSize=10&fields=files(id,name,modifiedTime)');
+  INFO.hojas=r.files.length;id=r.files.length?r.files[0].id:await crearHoja();meta=await hojaMeta(id)}
+ SS=id;ls.set(K('ss'),id);
+ let sh=meta.sheets.find(s=>s.properties.title===PEST);
+ if(!sh){await g(SH+id+':batchUpdate',post({requests:[{addSheet:{properties:{title:PEST}}}]}));meta=await hojaMeta(id);sh=meta.sheets.find(s=>s.properties.title===PEST)}
+ SHID=sh.properties.sheetId;const gp=sh.properties.gridProperties||{};ROWCOUNT=gp.rowCount||1000;
+ if((gp.columnCount||0)<NC)await g(SH+id+':batchUpdate',post({requests:[{appendDimension:{sheetId:SHID,dimension:'COLUMNS',length:NC-(gp.columnCount||0)}}]}));
+ const c=meta.sheets.find(s=>s.properties.title===PCONF);CONFID=c?c.properties.sheetId:null}
+// Lee todas las órdenes. Reconoce fechas que Sheets convirtió en número (como hacía Code.gs).
+async function leerTodo(){
+ if(!SS)await prepararHoja();
+ const base=SH+SS+'/values:batchGet?';
+ const[u,f]=await Promise.all([
+  g(base+'ranges='+rango('A1:W')+'&valueRenderOption=UNFORMATTED_VALUE&dateTimeRenderOption=SERIAL_NUMBER'),
+  g(base+'ranges='+rango('C1:C')+'&ranges='+rango('S1:S')+'&valueRenderOption=FORMATTED_STRING')]);
+ const rows=u.valueRanges[0].values||[],fc=f.valueRanges[0].values||[],fs=f.valueRanges[1].values||[];
+ let ancho=0;rows.forEach(r=>{ancho=Math.max(ancho,r.length)});
+ if(ancho<NC){ // igual que Code.gs: formato texto en A:W y encabezados completos
+  await g(SH+SS+':batchUpdate',post({requests:[fmtTexto(SHID)]}));
+  await g(SH+SS+'/values/'+rango('A1:W1')+'?valueInputOption=RAW',post({values:[H]},'PUT'));
+  if(rows.length)rows[0]=H.slice();else rows.push(H.slice())}
+ ULTIMA=rows.length;const W=Math.max(ancho,NC);
+ return rows.slice(1).map((r,i)=>{const o={_row:i+2},raw=[];
+  for(let j=0;j<W;j++){let v=r[j];
+   if(typeof v==='number'&&(j===2||j===18)){const fv=((j===2?fc:fs)[i+1]||[])[0];if(typeof fv==='string'&&/[\/:\-]/.test(fv))v=serialAFecha(v)}
+   v=v==null?'':String(v);if(j<NC){raw[j]=v;o[H[j]]=v}}
+  o._raw=raw;return o})}
+// Escribe solo las celdas que cambiaron (o una fila nueva al final, como appendRow).
+async function put(o){
+ const row=H.map(k=>String(o[k]??''));
+ if(o._row){const prev=o._raw||[],data=[];let j=0;
+  while(j<NC){if(row[j]!==(prev[j]??'')){let k=j;while(k+1<NC&&row[k+1]!==(prev[k+1]??''))k++;data.push({range:`'${PEST}'!${col(j)}${o._row}:${col(k)}${o._row}`,values:[row.slice(j,k+1)]});j=k+1}else j++}
+  if(data.length)await g(SH+SS+'/values:batchUpdate',post({valueInputOption:'RAW',data}))}
+ else{const n=ULTIMA+1;
+  if(n>ROWCOUNT){await g(SH+SS+':batchUpdate',post({requests:[{appendDimension:{sheetId:SHID,dimension:'ROWS',length:500}}]}));ROWCOUNT+=500}
+  await g(SH+SS+'/values/'+rango(`A${n}:W${n}`)+'?valueInputOption=RAW',post({values:[row]},'PUT'));o._row=n;ULTIMA=n}
+ o._raw=row}
+const vista=rows=>rows.filter(o=>o.id).reverse().map(o=>{const x=Object.assign({},o);delete x._raw;delete x._row;delete x.token;return x});
+
+// =====================================================================
+//  DRIVE: carpeta "Reparaciones", subidas, descargas
+// =====================================================================
+async function carpetaRaiz(rows,noCrear){
+ if(ROOT)return ROOT;const fija=id=>{ROOT=id;ls.set(K('root'),id);return id};
+ const guardada=ls.get(K('root'),'');
+ if(guardada){try{const f=await g(DR+'/'+guardada+'?fields=id,trashed');if(!f.trashed)return fija(f.id)}catch(e){}}
+ const ult=[...(rows||RC)].reverse().find(o=>o.folder); // la carpeta donde ya están tus órdenes
+ if(ult){try{const f=await g(DR+'/'+ult.folder+'?fields=parents');const p=f.parents&&f.parents[0];if(p){const raiz=await g(DR+'/root?fields=id');if(p!==raiz.id){const pf2=await g(DR+'/'+p+'?fields=id,trashed');if(!pf2.trashed)return fija(pf2.id)}}}catch(e){}}
+ const r=await g(DR+'?q='+qe(`name='${CARPETA}' and mimeType='application/vnd.google-apps.folder' and 'me' in owners and trashed=false`)+'&orderBy=modifiedTime desc&pageSize=5&fields=files(id)');
+ if(r.files.length)return fija(r.files[0].id);
+ if(noCrear)return '';
+ const n=await g(DR+'?fields=id',post({name:CARPETA,mimeType:'application/vnd.google-apps.folder'}));return fija(n.id)}
+async function subirArchivo(blob,meta){
+ const mime=meta.mimeType||blob.type||'application/octet-stream';
+ if(blob.size<=4.5e6){const bd='fc'+Math.random().toString(36).slice(2);
+  const body=new Blob(['--'+bd+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(meta)+'\r\n--'+bd+'\r\nContent-Type: '+mime+'\r\n\r\n',blob,'\r\n--'+bd+'--\r\n']);
+  return g(UP+'?uploadType=multipart&fields=id,webViewLink',{method:'POST',headers:{'Content-Type':'multipart/related; boundary='+bd},body})}
+ const r=await g(UP+'?uploadType=resumable&fields=id,webViewLink',{method:'POST',headers:{'Content-Type':'application/json; charset=UTF-8','X-Upload-Content-Type':mime},body:JSON.stringify(meta)},true);
+ const loc=r.headers.get('Location')||r.headers.get('location');if(!loc)throw new Error('SIN_LOCATION');
+ return g(loc,{method:'PUT',headers:{'Content-Type':mime},body:blob})}
+const papelera=id=>g(DR+'/'+id+'?fields=id',post({trashed:true},'PATCH'));
+const META={},METAF={},MINI={},LOCAL={},BLOBS={},GRANDE=[];
+async function metaCarpeta(folder,forzar){if(!folder||(METAF[folder]&&!forzar))return;METAF[folder]=1;let pt='';
+ do{const r=await g(DR+'?q='+qe(`'${folder}' in parents and trashed=false`)+'&pageSize=200&fields='+qe('nextPageToken,files(id,mimeType,size,description,thumbnailLink)')+(pt?'&pageToken='+qe(pt):''));
+  (r.files||[]).forEach(f=>{META[f.id]={thumb:f.thumbnailLink||'',mini:/^[\w-]{20,}$/.test(f.description||'')?f.description:'',mime:f.mimeType||'',size:+f.size||0}});pt=r.nextPageToken}while(pt)}
+async function bajar(id,grande){if(BLOBS[id])return BLOBS[id];const r=await g(DR+'/'+id+'?alt=media',{},true);const b=await r.blob();
+ if(grande){GRANDE.push(id);if(GRANDE.length>3)delete BLOBS[GRANDE.shift()]}BLOBS[id]=b;return b}
+const URLS={};const objURL=(id,b)=>URLS[id]||(URLS[id]=URL.createObjectURL(b));
+const tamThumb=(t,s)=>t.replace(/=s\d+(-[a-z0-9-]+)?$/i,'')+'=s'+s;
+async function urlMini(id){if(LOCAL[id])return LOCAL[id];if(MINI[id])return objURL('m'+id,MINI[id]);const m=META[id]||{};
+ if(m.mini){try{return objURL(m.mini,await bajar(m.mini))}catch(e){}}
+ if(m.thumb)return tamThumb(m.thumb,480);
+ return objURL(id,await bajar(id,true))}
+async function urlGrande(id){if(LOCAL[id])return LOCAL[id];const m=META[id]||{};
+ if(/heic|heif/i.test(m.mime)&&m.thumb)return tamThumb(m.thumb,2400);
+ return objURL(id,await bajar(id,true))}
+function pintar(){const L=[...document.querySelectorAll('img[data-f]:not([data-ok])')];if(!L.length)return;L.forEach(i=>i.dataset.ok=1);const folder=O.folder;
+ (async()=>{try{await metaCarpeta(folder)}catch(e){}let k=0;const w=async()=>{while(k<L.length){const im=L[k++];try{im.src=await urlMini(im.dataset.f)}catch(e){im.alt='sin foto'}}};await Promise.all([w(),w(),w(),w()])})()}
+const img=(id,extra)=>`<img data-f="${E(id)}" alt="" ${extra||''}>`;
+
+// =====================================================================
+//  ACCIONES (antes eran funciones del Code.gs)
+// =====================================================================
+async function lista(){const rows=await leerTodo();RC=rows;return vista(rows)}
+async function guardar(d){
+ const rows=await leerTodo();RC=rows;
+ let o=d.id?rows.find(x=>x.id===d.id):null;
+ if(!o){const ns=rows.map(x=>+String(x.id).slice(4)).filter(n=>isFinite(n));const n=Math.max(0,...ns)+1;
+  o={id:'ORD-'+String(n).padStart(4,'0'),token:uuid(),fecha:ahora()};
+  const root=await carpetaRaiz(rows);
+  const f=await g(DR+'?fields=id',post({name:o.id+' - '+String(d.cliente||''),mimeType:'application/vnd.google-apps.folder',parents:[root]}));
+  o.folder=f.id}
+ const keep=/Patr[oó]n:/.test(o.clave||'')?o.clave:null; // un patrón ya guardado no se puede cambiar
+ Object.keys(LIM).forEach(k=>o[k]=cl(d[k],LIM[k]));
+ o.total=mny(d.total);o.anticipo=mny(d.anticipo);o.estado=ST.includes(d.estado)?d.estado:'Recibido';
+ if(keep)o.clave=keep;
+ if(o.estado==='Entregado'&&!o.fechaEntrega)o.fechaEntrega=ahora();
+ await put(o);
+ return{id:o.id,folder:o.folder}}
+// Sube la foto ORIGINAL (sin recomprimir) + una miniatura ligera para el PDF.
+async function foto(folder,k,blob){
+ const mini=await shrink(blob,640,.78,true);
+ const base=k+'_'+ahora('yyyyMMdd_HHmmss')+'_'+Math.floor(Math.random()*1e4);
+ const ext={'image/png':'png','image/webp':'webp','image/heic':'heic','image/heif':'heif'}[blob.type]||'jpg';
+ const tipo=ext==='jpg'?'image/jpeg':blob.type;
+ let miniId='';if(mini){try{miniId=(await subirArchivo(mini,{name:'mini_'+base+'.jpg',mimeType:'image/jpeg',parents:[folder]})).id}catch(e){}}
+ const meta=(n,t)=>Object.assign({name:n,mimeType:t,parents:[folder]},miniId?{description:miniId}:{});
+ let f;try{f=await subirArchivo(blob,meta(base+'.'+ext,tipo))}
+ catch(e){if(e.message!=='SIN_LOCATION'&&blob.size<3e6)throw e;f=await subirArchivo(await shrink(blob,3200,.92),meta(base+'.jpg','image/jpeg'))}
+ if(mini)MINI[f.id]=mini;return f.id}
+async function pdf(id,add){
+ const rows=await leerTodo();RC=rows;const o=rows.find(x=>x.id===id);if(!o)throw new Error('No encontré la orden '+id);
+ if(add)[['in','fotosIn'],['out','fotosOut']].forEach(([k,key])=>{o[key]=JSON.stringify(js(o[key]).concat((add[k]||[]).filter(Boolean)).slice(0,10))});
+ if(add&&add.pat&&!o.patron){o.patron=(await subirArchivo(add.pat,{name:'patron.png',mimeType:'image/png',parents:[o.folder]})).id}
+ if(o.ticket){await papelera(o.ticket).catch(()=>{});o.ticket=''} // el ticket se regenera solo si hubo cambios
+ const viejo=o.pdf;
+ const bytes=await pdfOrden(o);
+ const f=await subirArchivo(new Blob([bytes],{type:'application/pdf'}),{name:o.id+'_'+ahora('yyyyMMdd_HHmm')+'.pdf',mimeType:'application/pdf',parents:[o.folder]});
+ o.pdf=f.id;await put(o);
+ if(viejo&&viejo!==f.id)papelera(viejo).catch(()=>{}); // el PDF anterior va a la papelera
+ return{id:o.id,pdf:f.webViewLink,pdfId:f.id,fecha:o.fecha,fotosIn:o.fotosIn,fotosOut:o.fotosOut,patron:o.patron}}
+async function ticket(id){
+ const rows=await leerTodo();RC=rows;const o=rows.find(x=>x.id===id);if(!o)throw new Error('No encontré la orden '+id);
+ if(o.ticket)return{id:o.ticket}; // ya existe: no se crea copia
+ const bytes=await pdfTicket(o);
+ const f=await subirArchivo(new Blob([bytes],{type:'application/pdf'}),{name:'ticket_'+o.id+'_'+ahora('yyyyMMdd_HHmm')+'.pdf',mimeType:'application/pdf',parents:[o.folder]});
+ o.ticket=f.id;await put(o);return{id:f.id}}
+// Nombre y logo del taller: se guardan en la pestaña "Config" de tu hoja; el logo es logo.png en la carpeta Reparaciones.
+async function leerConfig(){let t='',lid='',hayLogo=false;
+ if(CONFID!=null){const r=await g(SH+SS+'/values/'+qe(`'${PCONF}'!A1:B20`));(r.values||[]).forEach(([k,v])=>{if(k==='titulo')t=v||'';if(k==='logo'){lid=v||'';hayLogo=true}})}
+ if(!hayLogo){try{const root=await carpetaRaiz(RC,true);if(root){const r=await g(DR+'?q='+qe(`name='logo.png' and '${root}' in parents and trashed=false`)+'&orderBy=modifiedTime desc&pageSize=1&fields=files(id)');if(r.files[0])lid=r.files[0].id}}catch(e){}}
+ return{t,lid}}
+async function config(){if(!SS)await prepararHoja();const{t,lid}=await leerConfig();let logo='';
+ if(lid){if(CFG.logoId===lid&&CFG.logo)logo=CFG.logo;else{try{logo=await aDataURL(await bajar(lid))}catch(e){}}}
+ return{titulo:t||TALLER,logo,logoId:lid}}
+async function guardarConfig(t,logoBlob){
+ if(!SS)await prepararHoja();
+ if(CONFID==null){const r=await g(SH+SS+':batchUpdate',post({requests:[{addSheet:{properties:{title:PCONF}}}]}));CONFID=r.replies[0].addSheet.properties.sheetId}
+ const cur0=await leerConfig();let lid=cur0.lid;
+ if(logoBlob){if(lid)await papelera(lid).catch(()=>{});lid='';
+  if(logoBlob!=='QUITAR'){const root=await carpetaRaiz(RC);lid=(await subirArchivo(logoBlob,{name:'logo.png',mimeType:'image/png',parents:[root]})).id}}
+ const titulo=t&&t.trim()?t.trim():(cur0.t||TALLER);
+ await g(SH+SS+'/values/'+qe(`'${PCONF}'!A1:B2`)+'?valueInputOption=RAW',post({values:[['titulo',titulo],['logo',lid]]},'PUT'));
+ return config()}
+// Borrado automático a los 365 días (antes lo hacía un activador de Apps Script). Se revisa una vez al día al abrir la app.
+async function limpiar(rows){
+ const hoy=new Date().toDateString();if(ls.get(K('limp'),'')===hoy)return false;
+ const fechas=rows.map(o=>pf(o.fecha)).filter(Boolean);
+ // protección: si el reloj del celular estuviera mal, nunca se usa una fecha más de 2 días después de la orden más reciente
+ const tope=fechas.length?Math.min(Date.now(),Math.max(...fechas)+2*864e5)-365*864e5:0;
+ const viejos=rows.filter(o=>{const t=pf(o.fecha);return t&&t<tope});
+ if(viejos.length){for(const o of viejos){if(o.folder)await papelera(o.folder).catch(()=>{})}
+  await g(SH+SS+':batchUpdate',post({requests:viejos.map(o=>o._row).sort((a,b)=>b-a).map(r=>({deleteDimension:{range:{sheetId:SHID,dimension:'ROWS',startIndex:r-1,endIndex:r}}}))}))}
+ ls.set(K('limp'),hoy);return viejos.length>0}
+const LEC={lista,config},ESC={guardar,pdf,ticket,guardarConfig};
+
+// =====================================================================
+//  GENERADOR DE PDF PROPIO (sin librerías: funciona aunque no cargue nada de internet)
+// =====================================================================
+const HW=[278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584,350,556,350,222,556,333,1000,556,556,333,1000,667,333,1000,350,611,350,350,222,222,333,333,350,556,1000,333,1000,500,333,944,350,500,667,278,333,556,556,556,556,260,556,333,737,370,556,584,333,737,333,400,584,333,333,333,556,537,278,333,333,365,556,834,834,834,611,667,667,667,667,667,667,1000,722,667,667,667,667,278,278,278,278,722,722,778,778,778,778,778,584,778,722,722,722,722,667,667,611,556,556,556,556,556,556,889,500,556,556,556,556,278,278,278,278,556,556,556,556,556,556,556,584,611,556,556,556,556,500,556,500],HBW=[278,333,474,556,556,889,722,238,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,333,333,584,584,584,611,975,722,722,722,722,667,611,778,722,278,556,722,611,833,722,778,667,778,722,667,611,722,667,944,667,667,611,333,278,333,584,556,333,556,611,556,611,556,333,611,611,278,278,556,278,889,611,611,611,611,389,556,333,611,556,778,556,556,500,389,280,389,584,350,556,350,278,556,500,1000,556,556,333,1000,667,333,1000,350,611,350,350,278,278,500,500,350,556,1000,333,1000,556,333,944,350,500,667,278,333,556,556,556,556,280,556,333,737,370,556,584,333,737,333,400,584,333,333,333,611,556,278,333,333,365,556,834,834,834,611,722,722,722,722,722,722,1000,722,667,667,667,667,278,278,278,278,722,722,778,778,778,778,778,584,778,722,722,722,722,667,667,611,556,556,556,556,556,556,889,556,556,556,556,556,278,278,278,278,611,611,611,611,611,611,611,584,611,611,611,611,611,556,611,556];
+const WIN={0x20AC:128,0x201A:130,0x0192:131,0x201E:132,0x2026:133,0x2020:134,0x2021:135,0x02C6:136,0x2030:137,0x0160:138,0x2039:139,0x0152:140,0x017D:142,0x2018:145,0x2019:146,0x201C:147,0x201D:148,0x2022:149,0x2013:150,0x2014:151,0x02DC:152,0x2122:153,0x0161:154,0x203A:155,0x0153:156,0x017E:158,0x0178:159};
+function winAnsi(s){const o=[];for(const ch of String(s??'')){const c=ch.codePointAt(0);if(c===9||c===10||c===13){o.push(32);continue}if(c<32||(c>=0xFE00&&c<=0xFE0F)||c===0x200D||c>0xFFFF)continue;if(c<127||(c>=160&&c<=255))o.push(c);else if(WIN[c])o.push(WIN[c]);else if(!/\p{Extended_Pictographic}/u.test(ch))o.push(63)}return o}
+const KPT=72/25.4;
+function anchoTxt(s,f,size){let w=0;for(const c of winAnsi(s))w+=(f==='C'||f==='CB')?600:((f==='HB'?HBW:HW)[c-32]||556);return w*size/1000/KPT}
+function partir(s,f,size,maxW){const out=[];String(s??'').split(/\r?\n/).forEach(par=>{let line='';par.split(/\s+/).filter(Boolean).forEach(w0=>{let w=w0;const t=line?line+' '+w:w;if(anchoTxt(t,f,size)<=maxW){line=t;return}if(line)out.push(line);while(anchoTxt(w,f,size)>maxW&&w.length>1){let k=w.length;while(k>1&&anchoTxt(w.slice(0,k),f,size)>maxW)k--;out.push(w.slice(0,k));w=w.slice(k)}line=w});out.push(line)});return out}
+class PDFDoc{
+ constructor(w,h){this.w=w;this.h=h;this.pages=[];this.imgs=[];this.addPage()}
+ addPage(h){this.p={ops:[],w:this.w,h:h||this.h};this.pages.push(this.p)}
+ n(v){return String(Math.round(v*1000)/1000)}
+ X(x){return this.n(x*KPT)}Y(y){return this.n((this.p.h-y)*KPT)}
+ rgb(c){let h=String(c||'#000').replace('#','');if(h.length===3)h=h.split('').map(x=>x+x).join('');return[0,2,4].map(i=>this.n(parseInt(h.substr(i,2),16)/255)).join(' ')}
+ text(x,y,s,o){o=o||{};const f=o.f||'H',size=o.size||10,w=anchoTxt(s,f,size);let tx=x;if(o.align==='center')tx=x-w/2;else if(o.align==='right')tx=x-w;
+  const hex=winAnsi(s).map(c=>c.toString(16).padStart(2,'0')).join('');if(!hex)return w;
+  this.p.ops.push(`BT /${f} ${this.n(size)} Tf ${this.rgb(o.color)} rg ${this.X(tx)} ${this.Y(y)} Td <${hex}> Tj ET`);return w}
+ line(x1,y1,x2,y2,lw,c){this.p.ops.push(`${this.rgb(c)} RG ${this.n((lw||0.2)*KPT)} w ${this.X(x1)} ${this.Y(y1)} m ${this.X(x2)} ${this.Y(y2)} l S`)}
+ rect(x,y,w,h,o){o=o||{};const s=o.stroke!==false,f=!!o.fill;this.p.ops.push(`${f?this.rgb(o.fill)+' rg ':''}${s?this.rgb(o.stroke||'#000')+' RG '+this.n((o.lw||0.2)*KPT)+' w ':''}${this.X(x)} ${this.Y(y+h)} ${this.n(w*KPT)} ${this.n(h*KPT)} re ${f&&s?'B':f?'f':'S'}`)}
+ image(im,x,y,w,h){let i=this.imgs.indexOf(im);if(i<0){this.imgs.push(im);i=this.imgs.length-1}this.p.ops.push(`q ${this.n(w*KPT)} 0 0 ${this.n(h*KPT)} ${this.X(x)} ${this.Y(y+h)} cm /I${i} Do Q`)}
+ out(titulo){const enc=new TextEncoder(),parts=[],offs=[];let len=0,nobj=0;
+  const push=x=>{const b=typeof x==='string'?enc.encode(x):x;parts.push(b);len+=b.length};
+  const obj=body=>{nobj++;offs[nobj]=len;push(nobj+' 0 obj\n');if(typeof body==='function')body();else push(body);push('\nendobj\n')};
+  push('%PDF-1.4\n');push(new Uint8Array([37,226,227,207,211,10]));
+  const ni=this.imgs.length,pn=i=>7+ni+2*i;
+  obj('<< /Type /Catalog /Pages 2 0 R >>');
+  obj(`<< /Type /Pages /Kids [${this.pages.map((p,i)=>pn(i)+' 0 R').join(' ')}] /Count ${this.pages.length} >>`);
+  ['Helvetica','Helvetica-Bold','Courier','Courier-Bold'].forEach(b=>obj(`<< /Type /Font /Subtype /Type1 /BaseFont /${b} /Encoding /WinAnsiEncoding >>`));
+  this.imgs.forEach(im=>obj(()=>{push(`<< /Type /XObject /Subtype /Image /Width ${im.w} /Height ${im.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${im.bytes.length} >>\nstream\n`);push(im.bytes);push('\nendstream')}));
+  const res=`<< /Font << /H 3 0 R /HB 4 0 R /C 5 0 R /CB 6 0 R >> /XObject << ${this.imgs.map((m,i)=>`/I${i} ${7+i} 0 R`).join(' ')} >> >>`;
+  this.pages.forEach((p,i)=>{const c=p.ops.join('\n');obj(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${this.n(p.w*KPT)} ${this.n(p.h*KPT)}] /Resources ${res} /Contents ${pn(i)+1} 0 R >>`);obj(`<< /Length ${enc.encode(c).length} >>\nstream\n${c}\nendstream`)});
+  const tit=winAnsi(titulo||'').map(c=>c.toString(16).padStart(2,'0')).join('');obj(`<< /Title <${tit}> /Producer (Forever Cell) >>`);
+  const xref=len;push(`xref\n0 ${nobj+1}\n0000000000 65535 f \n`+offs.slice(1).map(o=>String(o).padStart(10,'0')+' 00000 n \n').join(''));
+  push(`trailer\n<< /Size ${nobj+1} /Root 1 0 R /Info ${nobj} 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
+  const outb=new Uint8Array(len);let p=0;parts.forEach(b=>{outb.set(b,p);p+=b.length});return outb}}
+// Convierte cualquier imagen (Blob o data URL) a JPEG para el PDF.
+function aJpeg(src,max){return new Promise((ok,no)=>{const url=typeof src==='string'?src:URL.createObjectURL(src);const i=new Image;
+ i.onload=()=>{const s=Math.min(1,max/Math.max(i.naturalWidth,i.naturalHeight)),c=document.createElement('canvas');c.width=Math.max(1,Math.round(i.naturalWidth*s));c.height=Math.max(1,Math.round(i.naturalHeight*s));
+  const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(i,0,0,c.width,c.height);if(typeof src!=='string')URL.revokeObjectURL(url);
+  c.toBlob(b=>{if(!b)return no(new Error('img'));b.arrayBuffer().then(a=>ok({bytes:new Uint8Array(a),w:c.width,h:c.height}),no)},'image/jpeg',.86)};
+ i.onerror=()=>{if(typeof src!=='string')URL.revokeObjectURL(url);no(new Error('img'))};i.src=url})}
+// Miniaturas para el PDF: la que se guardó al subir la foto; si no hay, se crea y se guarda para la próxima.
+async function imgsPdf(o){const ids=js(o.fotosIn).concat(js(o.fotosOut)),m={};
+ try{await metaCarpeta(o.folder,true)}catch(e){}
+ let k=0;const w=async()=>{while(k<ids.length){const id=ids[k++];try{
+  let b=MINI[id];if(!b&&META[id]&&META[id].mini){try{b=await bajar(META[id].mini)}catch(e){}}
+  if(b){m[id]=await aJpeg(b,640);continue}
+  const orig=await bajar(id,true);const mini=await shrink(orig,640,.78,true);if(!mini)continue;
+  MINI[id]=mini;m[id]=await aJpeg(mini,640);
+  try{const mf=await subirArchivo(mini,{name:'mini_'+id+'.jpg',mimeType:'image/jpeg',parents:[o.folder]});await g(DR+'/'+id+'?fields=id',post({description:mf.id},'PATCH'));if(META[id])META[id].mini=mf.id}catch(e){}
+ }catch(e){}}};
+ await Promise.all([w(),w(),w()]);return m}
+const secPat=s=>((String(s||'').match(/Patr[oó]n:\s*([\d-]+)/)||[])[1]||'').split('-').filter(Boolean).map(Number).filter(n=>n>=1&&n<=9);
+// ----- Orden de servicio (tamaño carta, igual al diseño anterior) -----
+async function pdfOrden(o){
+ const PW=215.9,PH=279.4,M=10,W=PW-2*M,BOT=PH-M,LH=4.4,d=new PDFDoc(PW,PH);
+ const fotos=await imgsPdf(o);
+ const logo=CFG.logo?await aJpeg(CFG.logo,400).catch(()=>null):null;
+ let y=M;
+ // Encabezado
+ let lx=M;if(logo){const lh=16,lw=Math.min(28,lh*logo.w/logo.h);d.image(logo,M,y,lw,lh);lx=M+lw+4}
+ const ti=CFG.titulo||TALLER,maxT=PW-M-lx-50;let ts=20;while(ts>11&&anchoTxt(ti,'HB',ts)>maxT)ts--;
+ const tl=partir(ti,'HB',ts,maxT).slice(0,2);tl.forEach((t,i)=>d.text(lx,y+(tl.length>1?6:9.5)+i*ts*0.42,t,{f:'HB',size:ts}));
+ d.text(PW-M,y+4,'ORDEN DE SERVICIO',{size:8,align:'right'});d.text(PW-M,y+10.5,o.id,{f:'HB',size:15,align:'right'});d.text(PW-M,y+15,o.fecha,{size:8,align:'right'});
+ y+=18.5;d.rect(M,y,W,0.8,{fill:'#000',stroke:false});y+=4.5;
+ // Estado
+ const ce=EC[o.estado]||'#000',et=String(o.estado||'').toUpperCase(),ew=anchoTxt(et,'HB',12)+6;
+ d.rect(M,y,ew,7.5,{stroke:ce,lw:0.6});d.text(M+3,y+5.3,et,{f:'HB',size:12,color:ce});y+=7.5+4;
+ const caja=(x,yy,w,h,t)=>{d.rect(x,yy,w,h,{lw:0.3});d.line(x,yy+6.5,x+w,yy+6.5,0.3);d.text(x+2.5,yy+4.6,t,{f:'HB',size:8})};
+ // Cliente / Equipo
+ const cw=(W-4)/2,iw=cw-5;
+ const A=[...partir(o.cliente,'HB',10,iw).map(t=>[t,'HB']),['Tel. 1: '+o.ref1,'H'],['Tel. 2: '+o.ref2,'H']];
+ const B=[...partir(o.equipo,'HB',10,iw).map(t=>[t,'HB']),...partir('Motivo: '+o.falla,'H',10,iw).map(t=>[t,'H']),...partir('Dejó: '+o.accesorios,'H',10,iw).map(t=>[t,'H'])];
+ const bh=6.5+3+Math.max(A.length,B.length)*LH+1.5;
+ [[M,'CLIENTE',A],[M+cw+4,'EQUIPO',B]].forEach(([x,t,L])=>{caja(x,y,cw,bh,t);L.forEach(([s,f],i)=>d.text(x+2.5,y+6.5+3+3.3+i*LH,s,{f,size:10}))});
+ y+=bh+4;
+ // Cobro
+ const rs=(+o.total||0)-(+o.anticipo||0),rc=rs>0?'#c00000':'#000',ch=6.5+15,c3=W/3;caja(M,y,W,ch,'COBRO');
+ [['Total','$'+(o.total||0),'#000',13],['Anticipo','$'+(o.anticipo||0),'#000',13],['Adeudo','$'+rs,rc,14]].forEach(([a,b,c,s],i)=>{const cx=M+c3*i+c3/2;if(i)d.line(M+c3*i,y+8.5,M+c3*i,y+ch-2,0.3);d.text(cx,y+12,a,{size:9,align:'center',color:c});d.text(cx,y+18.6,b,{f:'HB',size:s,align:'center',color:c})});
+ y+=ch+4;
+ // Acceso al equipo (uso interno)
+ const sq=secPat(o.clave);
+ if(o.clave||o.patron){const L=partir(o.clave,'H',10,W-5).filter(Boolean);let pi=null;if(sq.length>1){try{pi=await aJpeg(await patBlob(sq),300)}catch(e){}}
+  const ah=6.5+3+L.length*LH+(pi?26:0)+1.5;caja(M,y,W,ah,'ACCESO AL EQUIPO · USO INTERNO');L.forEach((s,i)=>d.text(M+2.5,y+6.5+3+3.3+i*LH,s,{size:10}));
+  if(pi)d.image(pi,M+2.5,y+6.5+3+L.length*LH+0.5,24,24);y+=ah+4}
+ // Evidencia fotográfica: las fotos se ajustan al espacio que queda en la hoja (ni muy chicas ni muy grandes)
+ const fi=js(o.fotosIn),fo=js(o.fotosOut),n=Math.max(fi.length,fo.length),cols=n<=4?4:5,gap=2.5,iw2=W-5,maxCell=(iw2-gap*(cols-1))/cols;
+ const entrega=!!(fo.length||o.notasEntrega),notas=entrega?partir(o.notasEntrega,'H',10,iw2).filter(Boolean):[];
+ const filas=Math.ceil(fi.length/cols)+(entrega?Math.ceil(fo.length/cols):0);
+ const fija=6.5+2.5+5.5+(fi.length?0:LH)+(entrega?2+5.5+notas.length*LH+(fo.length?0:LH):0)+1.5;
+ let cell=maxCell;if(filas){const c=(BOT-2-y-fija)/filas-gap;if(c>=26)cell=Math.min(maxCell,c)}
+ let ys=y;
+ const cab=t=>{d.line(M,y+6.5,M+W,y+6.5,0.3);d.text(M+2.5,y+4.6,t,{f:'HB',size:8});y+=6.5+2.5};
+ const cerrar=()=>d.rect(M,ys,W,y+1.5-ys,{lw:0.3});
+ const cabe=h=>{if(y+h>BOT-2){cerrar();d.addPage();y=M;ys=y;cab('EVIDENCIA FOTOGRÁFICA (continúa)')}};
+ const tit=t=>{cabe(5.5);d.text(M+2.5,y+4,t,{f:'HB',size:10});y+=5.5};
+ const lin=(t,f)=>{cabe(LH);d.text(M+2.5,y+3.3,t,{f:f||'H',size:10});y+=LH};
+ const rejilla=ids=>{if(!ids.length){lin('Sin fotos');return}
+  for(let i=0;i<ids.length;i+=cols){cabe(cell+gap);ids.slice(i,i+cols).forEach((id,j)=>{const x=M+2.5+j*(cell+gap),im=fotos[id];
+   if(im){const s=Math.min(cell/im.w,cell/im.h),w=im.w*s,h=im.h*s;d.image(im,x+(cell-w)/2,y+(cell-h)/2,w,h)}
+   else{d.rect(x,y,cell,cell,{stroke:'#999999',lw:0.2});d.text(x+cell/2,y+cell/2,'foto no disponible',{size:7,align:'center',color:'#777777'})}});y+=cell+gap}};
+ cab('EVIDENCIA FOTOGRÁFICA');
+ tit('Al recibir ('+fi.length+')');rejilla(fi);
+ if(entrega){y+=2;tit('Al entregar'+(o.fechaEntrega?' · '+o.fechaEntrega:'')+' ('+fo.length+')');notas.forEach(t=>lin(t));rejilla(fo)}
+ cerrar();
+ return d.out('Orden '+o.id)}
+// ----- Ticket de compra (80 mm de ancho) -----
+async function pdfTicket(o){
+ const W=80,M=4,iw=W-2*M,S=9,LH=3.9,rs=(+o.total||0)-(+o.anticipo||0);
+ const logo=CFG.logo?await aJpeg(CFG.logo,300).catch(()=>null):null;
+ const it=[];const cen=(t,b,s)=>partir(t,b?'CB':'C',s||S,iw).forEach(x=>it.push(['c',x,b,s||S]));const izq=(t,b)=>partir(t,b?'CB':'C',S,iw).forEach(x=>it.push(['l',x,b,S]));const hr=()=>it.push(['hr']);
+ cen(CFG.titulo||TALLER,true,11);cen('TICKET DE COMPRA');cen('Orden '+o.id);cen(o.fecha);hr();
+ izq('Cliente: '+o.cliente);izq('Tel: '+o.ref1);izq('Equipo: '+o.equipo);izq('Servicio: '+o.falla);izq('Dejó: '+o.accesorios);hr();
+ izq('Total: $'+(o.total||0));izq('Anticipo: $'+(o.anticipo||0));izq('Resta: $'+rs,true);hr();
+ cen('Estado: '+o.estado);cen('¡Gracias por su preferencia!');
+ const lh=e=>e[0]==='hr'?3:e[3]>S?5:LH;
+ const lgH=logo?14:0,alto=M+(logo?lgH+3:0)+it.reduce((a,e)=>a+lh(e),0)+M;
+ const d=new PDFDoc(W,alto);let y=M;
+ if(logo){const lw=Math.min(iw,lgH*logo.w/logo.h);d.image(logo,(W-lw)/2,y,lw,lgH);y+=lgH+3}
+ it.forEach(e=>{if(e[0]==='hr'){d.line(M,y+1.5,W-M,y+1.5,0.2);y+=3;return}const h=lh(e);d.text(e[0]==='c'?W/2:M,y+h-1,e[1],{f:e[2]?'CB':'C',size:e[3],align:e[0]==='c'?'center':'left'});y+=h});
+ return d.out('Ticket '+o.id)}
+
+// =====================================================================
+//  PANTALLAS
+// =====================================================================
+const v=h=>{$('#app').innerHTML=h;$('#nav').style.display='none';VIEW=0;window.scrollTo(0,0)};
+document.addEventListener('gesturestart',e=>e.preventDefault());
+onpopstate=()=>{if($('#vw')){$('#vw').remove();return}if($('#cam')){camOff();history.pushState({},'');return}if($('#pat')){$('#pat').remove();history.pushState({},'');return}if(!EMAIL){login();return}go()};
+function touch(){if(O.id&&$('#sv')&&!dirty){dirty=true;$('#sv').textContent='💾 Guardar cambios y actualizar PDF'}}
+$('#app').addEventListener('input',touch);$('#app').addEventListener('change',touch);
+function setCfg(c){CFG=c;ls.set(K('cfg'),c);hdr()}
+function hdr(){$('#ht').textContent=CFG.titulo||APP;const l=$('#hl');if(CFG.logo){l.src=CFG.logo;l.style.display='block'}else l.style.display='none';$('#hb').style.display=EMAIL?'':'none'}
+
+// ----- Inicio de sesión -----
+function login(m){v(`<div class="card login"><img class=lg src="${CFG.logo||LOGO_APP}" alt=""><h2>${E(CFG.titulo||APP)}</h2><p>Control de órdenes de reparación</p>
+ <button class=gbtn onclick="entrar(true)">${GSVG}<span>Iniciar sesión con Google</span></button><div id=msg style="color:#b93838">${E(m||'')}</div>
+ <p class=peq style="margin-top:18px">Tus órdenes y fotos se guardan en tu propio Google Drive.<br><a href="privacidad.html">Aviso de privacidad</a></p></div>`);$('#hb').style.display='none'}
+async function entrar(inter){INTER=!!inter;const m=t=>{const e=$('#msg');if(e){e.style.color='#1769aa';e.textContent=t}};m('Conectando con Google…');
+ try{await getToken();
+  const u=await g(GA+'oauth2/v3/userinfo');const em=String(u.email||'').toLowerCase();if(!em)throw new Error('No se pudo leer el correo de la cuenta.');
+  EMAIL=em;ls.set('email',em);cargarCuenta();history.replaceState({},'');go()}
+ catch(e){const msg=e.message==='SESION'?'':e.message;login(msg)}}
+async function salir(){if(!confirm('¿Cerrar sesión? Tus datos siguen guardados en tu Google Drive.'))return;
+ const t=TOK.t,em=EMAIL;
+ try{if(AND)AND.cerrarSesion(em,t);else if(window.google&&google.accounts&&google.accounts.oauth2&&t)google.accounts.oauth2.revoke(t,()=>{})}catch(e){}
+ try{Object.keys(localStorage).filter(k=>k!=='ver').forEach(k=>localStorage.removeItem(k))}catch(e){}
+ EMAIL='';TOK={t:'',exp:0};R=[];CFG={};SS='';ROOT='';hdr();login('Sesión cerrada. Puedes entrar con la misma u otra cuenta.')}
+
+// ----- Lista de órdenes -----
+let CARGANDO=false;
+async function go(){if(CARGANDO){home();return}CARGANDO=true;home();
+ try{if(!SS)await prepararHoja();
+  let rows=await leerTodo();RC=rows;
+  if(await gxPost(()=>limpiar(rows))){rows=await leerTodo();RC=rows}
+  R=vista(rows);cache();CARGANDO=false;if(VIEW===1)filt();
+  if(!YA_CONF){YA_CONF=true;config().then(setCfg).catch(()=>{YA_CONF=false})}}
+ catch(e){if(e.message==='SESION'){login('Tu sesión venció. Vuelve a entrar.');return}if(VIEW===1&&!R.length)$('#l').innerHTML=`<p style="color:#b93838">${E(e.message)}</p><button class="btn s" onclick="go()">Reintentar</button>`;else aviso(e.message)}
+ finally{if(CARGANDO){CARGANDO=false;if(VIEW===1&&!R.length&&!$('#l').textContent.includes('Reintentar'))filt()}}}
+function home(){v(`<button class=btn onclick="abrir()">＋ Nueva orden</button><input id=q placeholder="Buscar cliente, equipo u orden" oninput="filt()" style="margin-top:10px"><div class=card id=l style="margin-top:10px"></div>`);VIEW=1;filt()}
+function filt(){const qq=($('#q').value||'').toLowerCase();nav();$('#l').innerHTML=(FIL?`<span class=b>${FIL}</span> <small>(toca de nuevo el menú para ver todas)</small>`:'')+(R.filter(o=>(!FIL||o.estado==FIL)&&(o.id+' '+o.cliente+' '+o.equipo).toLowerCase().includes(qq)).map(o=>`<div class=it onclick="abrir('${E(o.id)}')"><b>${E(o.id)} · ${E(o.cliente)}</b><br>${E(o.equipo)}<br><span class=b style="color:${EC[o.estado]||'#000'}">${E(o.estado)}</span> Adeudo: <b style="color:${(+o.total||0)-(+o.anticipo||0)>0?'#c00000':'#000'}">$${(+o.total||0)-(+o.anticipo||0)}</b></div>`).join('')||(CARGANDO?'<p>Cargando órdenes…</p>':'<p>Sin órdenes</p>'))}
+function nav(){const n=$('#nav');n.style.display='flex';n.innerHTML=ST.map((s,i)=>`<button class="${FIL==s?'on':''}" onclick="fil('${s}')">${IC[i]}<br>${s=='Listo para entregar'?'Listo':s=='En reparación'?'Reparando':s}<small>${R.filter(o=>o.estado==s).length}</small></button>`).join('')}
+const fil=s=>{FIL=FIL==s?'':s;filt()};
+
+// ----- Ajustes -----
+function ajustes(){history.pushState({},'');LG='';const hoja=SS?'https://docs.google.com/spreadsheets/d/'+SS+'/edit':'';const carp=ROOT?'https://drive.google.com/drive/folders/'+ROOT:'';
+ v(`<div class="card aj"><h3>👤 Cuenta</h3><p>${E(EMAIL)}</p><button class="btn s" onclick="salir()">Cerrar sesión o cambiar de cuenta</button></div>
+ <div class="card aj"><h3>🏪 Datos del taller</h3><label>Nombre / título (se usa en la app, PDF, ticket y mensajes)</label><input id=tt value="${E(CFG.titulo||TALLER)}">
+ <label>Logo</label><div id=lp>${CFG.logo?`<img src="${CFG.logo}" style="height:70px">`:'Sin logo'}</div><input type=file accept="image/*" onchange="pickLogo(this)" style="margin-top:8px">
+ <button class="btn s" onclick="LG='QUITAR';$('#lp').textContent='Se quitará el logo al guardar'">Quitar logo</button><button class="btn g" onclick="saveCfg()">💾 Guardar</button><div id=msg></div></div>
+ <div class="card aj"><h3>📊 Hoja de Google</h3>${hoja?`<p><a href="#" onclick="abrirUrl('${hoja}');return false">Abrir “${E(HOJA)}”</a></p>`:'<p>Cargando…</p>'}${INFO.hojas>1?`<p class=peq>Encontré ${INFO.hojas} hojas con ese nombre; uso la que se modificó más recientemente.</p>`:''}
+ ${carp?`<p><a href="#" onclick="abrirUrl('${carp}');return false">Abrir carpeta de fotos y PDF</a></p>`:''}
+ <label>¿Usar otra hoja? Pega aquí su link</label><input id=otra placeholder="https://docs.google.com/spreadsheets/d/..."><button class="btn s" onclick="usarOtra()">Usar esta hoja</button></div>
+ <div class="card aj peq"><p>Versión ${VER} (${ORIGEN})</p><p><a href="privacidad.html">Aviso de privacidad</a></p></div>
+ <button class="btn s" onclick="history.back()">Volver</button>`)}
+async function usarOtra(){const t=$('#otra').value.trim(),m=(t.match(/\/d\/([\w-]{20,})/)||t.match(/^([\w-]{30,})$/)||[])[1];if(!m)return alert('Ese link no parece de una hoja de Google.');
+ try{await hojaMeta(m)}catch(e){return alert(e.message)}ls.set(K('ss'),m);SS='';ROOT='';ls.del(K('root'));ls.del(K('limp'));R=[];cache();YA_CONF=false;aviso('Hoja cambiada');history.back()}
+function shrink(f,max,q,nulo){return new Promise(ok=>{const i=new Image,u=URL.createObjectURL(f);i.onload=()=>{const s=Math.min(1,max/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=Math.max(1,Math.round(i.width*s));c.height=Math.max(1,Math.round(i.height*s));c.getContext('2d').drawImage(i,0,0,c.width,c.height);URL.revokeObjectURL(u);c.toBlob(b=>ok(b||(nulo?null:f)),'image/jpeg',q)};i.onerror=()=>{URL.revokeObjectURL(u);ok(nulo?null:f)};i.src=u})}
+function comp(f,max){return new Promise(ok=>{const i=new Image,u=URL.createObjectURL(f);i.onload=()=>{const s=Math.min(1,max/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=i.width*s;c.height=i.height*s;c.getContext('2d').drawImage(i,0,0,c.width,c.height);URL.revokeObjectURL(u);c.toBlob(ok,'image/png')};i.src=u})}
+async function pickLogo(i){const f=i.files[0];if(!f)return;LG=await comp(f,300);$('#lp').innerHTML=`<img src="${URL.createObjectURL(LG)}" style="height:70px">`}
+async function saveCfg(){$('#msg').textContent='Guardando…';try{setCfg(await run('guardarConfig',$('#tt').value,LG||null));aviso('Datos del taller guardados');history.back()}catch(e){$('#msg').textContent='Error: '+(e.message||e)}}
+
+// ----- Orden -----
+function abrir(id){NEW={in:[],out:[]};dirty=false;history.pushState({},'');
+ O=id?Object.assign({},R.find(o=>o.id===id)):{estado:'Recibido',total:0,anticipo:0,fotosIn:'[]',fotosOut:'[]'};
+ const nIn=js(O.fotosIn),nOut=js(O.fotosOut);
+ const fecha=id?O.fecha:new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+ const LK=id&&/Patr[oó]n:/.test(O.clave||'');
+ const fb=k=>`<input type=file accept="image/*" multiple onchange="add(this,'${k}')" style="margin-top:8px"><button class="btn s" onclick="serie('${k}')">📸 Cámara en serie (sin confirmar cada foto)</button><div class=ph id=n${k}></div>`;
+ v(`<div class=card><b>${E(O.id||'Nueva orden')}</b>
+ <div class=rest>📅 Recibido: ${E(fecha)}</div>
+ <label>Nombre del cliente</label><input id=cliente value="${E(O.cliente)}">
+ <div class=row><div><label>Referencia 1 (celular)</label><input id=ref1 type=tel value="${E(O.ref1)}"></div><div><label>Referencia 2</label><input id=ref2 type=tel value="${E(O.ref2)}"></div></div>
+ <label>Equipo (marca / modelo)</label><input id=equipo value="${E(O.equipo)}">
+ <label>¿Por qué viene a reparación?</label><textarea id=falla>${E(O.falla)}</textarea>
+ <label>Lo que dejó el cliente (SIM, SD, cargador, funda…)</label><textarea id=accesorios>${E(O.accesorios)}</textarea>
+ <label>🔒 PIN, contraseña o patrón del teléfono</label><input id=clave value="${E(O.clave)}" ${LK?'readonly':''}><button class="btn s" onclick="pat()">${LK?'👁 Ver patrón (bloqueado)':'🔓 Dibujar / ver patrón'}</button>
+ <div class=row><div><label>Total a cobrar</label><input id=total type=number inputmode=decimal value="${E(O.total)}" oninput="calc()"></div><div><label>Anticipo</label><input id=anticipo type=number inputmode=decimal value="${E(O.anticipo)}" oninput="calc()"></div></div>
+ <div class=rest id=rest></div></div>
+ <div class=card><b>📷 Fotos de cómo llegó el equipo</b> <span id=cin></span>
+ <div class=ph>${nIn.map(i=>img(i,`onclick="ver('${E(i)}')"`)).join('')}</div>${fb('in')}
+ <p style="font-size:12px;color:#637386">Las fotos nuevas puedes quitarlas con ✕ antes de guardar. Ya guardadas no se pueden borrar (evidencia).</p></div>
+ ${id?`<div class=card><b>✅ Entrega</b><label>Estado</label><select id=estado>${ST.map(s=>`<option ${s==O.estado?'selected':''}>${s}</option>`).join('')}</select>
+ <label>Notas de entrega (trabajo realizado)</label><textarea id=notasEntrega>${E(O.notasEntrega)}</textarea>
+ <b style="display:block;margin-top:10px">📷 Fotos de entrega</b><span id=cout></span><div class=ph>${nOut.map(i=>img(i,`onclick="ver('${E(i)}')"`)).join('')}</div>${fb('out')}
+ <button class="btn r" onclick="cancelar()">🚫 Cancelar esta orden</button></div>
+ <div class=card><b>📣 Avisar / Imprimir</b><p style="font-size:12px;color:#637386;margin:4px 0">Guarda primero los cambios. WhatsApp y SMS abren el mensaje listo para enviar.</p>${btns()}</div>`:''}
+ <button class="btn g" id=sv onclick="principal()">${id&&O.pdf?'📄 Previsualizar PDF':'💾 Guardar y generar PDF'}</button><button class="btn s" onclick="history.back()">Cancelar</button><div id=msg></div>`);
+ O._n={in:nIn.length,out:nOut.length};calc();cnt();pintar()}
+const btns=()=>`<div class=row><button class="btn s m" onclick="wa()">📲 WhatsApp</button><button class="btn s m" onclick="sms()">💬 SMS</button><button class="btn s m" onclick="llamar()">📞 Llamar</button></div><button class="btn s" onclick="tk()">${O.ticket?'🧾 Previsualizar ticket':'🧾 Generar ticket'}</button><div class=row><button class="btn s m" onclick="prn('o')">🖨 Imprimir orden</button><button class="btn s m" onclick="prn('t')">🖨 Imprimir ticket</button></div>`;
+function principal(){if(O.id&&O.pdf&&!dirty)verArchivo(O.pdf,O.id+'.pdf');else save()}
+function cur(){const d={id:O.id};KS.forEach(k=>{const e=$('#'+k);d[k]=e?e.value:(O[k]||'')});return d}
+const num=d=>{const n=(d.ref1||'').replace(/\D/g,'');return n.length<=10?LADA+n:n};
+const txt=d=>`Hola ${d.cliente}, te informamos de ${CFG.titulo||TALLER} que tu equipo ${d.equipo} (orden ${d.id}) ya está listo. Puedes pasar a recogerlo. Resta por pagar: $${(+d.total||0)-(+d.anticipo||0)}. ¡Gracias!`;
+const wa=()=>{const d=cur();abrirUrl('https://wa.me/'+num(d)+'?text='+qe(txt(d)))};
+const sms=()=>{const d=cur();abrirUrl('sms:+'+num(d)+'?body='+qe(txt(d)))};
+const llamar=()=>{const n=(cur().ref1||'').replace(/\D/g,'');if(!n)return alert('No hay número en Referencia 1');abrirUrl('tel:'+n)};
+// Abre un PDF: en el APK se guarda en Descargas/ForeverCell y se abre; en web se abre en Drive.
+async function verArchivo(id,nombre){const m=t=>{const e=$('#msg');if(e)e.textContent=t};
+ if(!AND){window.open('https://drive.google.com/file/d/'+id+'/view','_blank');return}
+ m('Abriendo PDF…');try{const b=await bajar(id);AND.guardarArchivo(nombre,'application/pdf',await b64(b));m('')}catch(e){m('Error: '+e.message)}}
+async function tk(){const m=t=>{const e=$('#msg');if(e)e.textContent=t};if(O.ticket){verArchivo(O.ticket,'ticket_'+O.id+'.pdf');return}m('Generando ticket…');
+ try{const r=await run('ticket',O.id);O.ticket=r.id;const x=R.find(o=>o.id===O.id);if(x){x.ticket=r.id;cache()}document.querySelectorAll('button').forEach(b=>{if(b.textContent==='🧾 Generar ticket')b.textContent='🧾 Previsualizar ticket'});m('');verArchivo(r.id,'ticket_'+O.id+'.pdf')}catch(e){m('Error: '+(e.message||e))}}
+function cancelar(){if(!confirm('¿Marcar esta orden como CANCELADA?'))return;$('#estado').value='Cancelado';touch();save()}
+function docHtml(d,t){const rs=(+d.total||0)-(+d.anticipo||0),lg=CFG.logo?`<img src="${CFG.logo}" style="height:${t=='t'?40:60}px"><br>`:'',ti=E(CFG.titulo||TALLER);
+ if(t=='t')return `<style>@page{size:80mm auto;margin:0}</style><div style="font-family:monospace;font-size:12px;width:72mm;margin:auto;padding:3mm 0;color:#000"><div style="text-align:center">${lg}<b>${ti}</b><br>TICKET DE COMPRA<br>${E(d.id)} · ${E(d.fecha)}</div><hr>Cliente: ${E(d.cliente)}<br>Tel: ${E(d.ref1)}<br>Equipo: ${E(d.equipo)}<br>Servicio: ${E(d.falla)}<br>Dejó: ${E(d.accesorios)}<hr>Total: $${E(d.total)}<br>Anticipo: $${E(d.anticipo)}<br><b>Resta: $${rs}</b><hr><div style="text-align:center">Estado: ${E(d.estado)}<br>¡Gracias por su preferencia!</div></div>`;
+ const fi=js(O.fotosIn),fo=js(O.fotosOut),n=Math.max(fi.length,fo.length),w=n<=4?23.5:18.8,c=EC[d.estado]||'#000';
+ const ph=a=>js(a).map(i=>img(i,`style="width:${w}%;aspect-ratio:1;object-fit:cover;margin:.5%;border:1px solid #000"`)).join('')||'<i>Sin fotos</i>',bx=(h,b)=>`<div style="border:1px solid #000;margin-bottom:8px;break-inside:avoid"><div style="border-bottom:1px solid #000;padding:5px 8px;font:bold 11px Arial">${h}</div><div style="padding:8px;font-size:13px">${b}</div></div>`;
+ return `<style>@page{margin:0}html,body{background:#fff!important}</style><div style="font-family:Arial,sans-serif;color:#000;padding:7mm"><div style="display:flex;align-items:center;gap:12px;border-bottom:3px solid #000;padding-bottom:8px">${lg}<b style="font-size:22px;flex:1">${ti}</b><div style="text-align:right;font-size:11px">ORDEN DE SERVICIO<br><b style="font-size:18px">${E(d.id)}</b><br>${E(d.fecha)}</div></div><div style="margin:10px 0"><span style="border:2px solid ${c};color:${c};padding:3px 12px;font-size:15px;font-weight:bold">${E(d.estado).toUpperCase()}</span></div>
+ <div style="display:flex;gap:8px"><div style="flex:1">${bx('CLIENTE',`<b>${E(d.cliente)}</b><br>Tel. 1: ${E(d.ref1)}<br>Tel. 2: ${E(d.ref2)}`)}</div><div style="flex:1">${bx('EQUIPO',`<b>${E(d.equipo)}</b><br>Motivo: ${E(d.falla)}<br>Dejó: ${E(d.accesorios)}`)}</div></div>
+ ${bx('COBRO',`<div style="display:flex;text-align:center"><div style="flex:1">Total<br><b style="font-size:17px">$${E(d.total)}</b></div><div style="flex:1;border-left:1px solid #000">Anticipo<br><b style="font-size:17px">$${E(d.anticipo)}</b></div><div style="flex:1;border-left:1px solid #000;color:${rs>0?'#c00000':'#000'}">Adeudo<br><b style="font-size:19px">$${rs}</b></div></div>`)}
+ ${bx('EVIDENCIA FOTOGRÁFICA',`<b>Al recibir (${fi.length})</b><br>${ph(O.fotosIn)}${fo.length||d.notasEntrega?`<br><b>Al entregar (${fo.length})</b> ${E(d.notasEntrega)}<br>${ph(O.fotosOut)}`:''}`)}</div>`}
+let PRB=0;function pr(b){if(PRB)return;PRB=1;b.disabled=true;b.textContent='Abriendo impresión…';setTimeout(()=>{PRB=0;b.disabled=false;b.textContent='🖨 Imprimir'},5000);imprimir()}
+function prn(t){const d=Object.assign({},cur(),{fecha:O.fecha||''});history.pushState({},'');v(`<div class=noprint><button class="btn g" onclick="pr(this)">🖨 Imprimir</button><button class="btn s" onclick="history.back()">Volver</button><p style="font-size:12px;color:#637386">Vista previa de impresión.</p></div><div class=card>${docHtml(d,t)}</div>`);pintar()}
+function calc(){const r=(+$('#total').value||0)-(+$('#anticipo').value||0);$('#rest').textContent='Resta por pagar: $'+r}
+function cnt(){['in','out'].forEach(k=>{const e=$('#c'+k);if(e)e.textContent=(O._n[k]+NEW[k].length)+'/10';const g2=$('#n'+k);if(g2)g2.innerHTML=NEW[k].map((x,i)=>`<div><img src="${x.u}"><b class=x onclick="del('${k}',${i})">✕</b></div>`).join('')})}
+const del=(k,i)=>{URL.revokeObjectURL(NEW[k][i].u);NEW[k].splice(i,1);cnt();touch()};
+async function add(inp,k){for(const f of inp.files){if(O._n[k]+NEW[k].length>=10){alert('Máximo 10 fotos');break}NEW[k].push({b:f,u:URL.createObjectURL(f)})}inp.value='';cnt();touch()}
+async function serie(k){if(O._n[k]+NEW[k].length>=10)return alert('Máximo 10 fotos');
+ try{STM=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:4096},height:{ideal:3072}}})}catch(e){return alert('La app no tiene permiso de cámara. Usa "Elegir archivos" o activa el permiso de cámara en los ajustes de la app.')}
+ const d=document.createElement('div');d.id='cam';d.style.cssText='position:fixed;inset:0;background:#000;z-index:99;display:flex;flex-direction:column';
+ d.innerHTML=`<video id=vd autoplay playsinline muted style="flex:1;min-height:0;width:100%;object-fit:contain"></video><div style="padding:14px 14px 28px;display:flex;align-items:center;justify-content:space-between"><b id=cc style="color:#fff;width:70px"></b><button onclick="snap('${k}')" style="width:76px;height:76px;border-radius:50%;border:5px solid #ccc;background:#fff;font-size:28px">📷</button><button onclick="camOff()" style="width:70px;border:0;border-radius:10px;padding:12px 0;font-weight:700">Listo</button></div>`;
+ document.body.appendChild(d);$('#vd').srcObject=STM;cc(k)}
+const cc=k=>$('#cc').textContent=(O._n[k]+NEW[k].length)+'/10';
+function camOff(){STM&&STM.getTracks().forEach(t=>t.stop());const d=$('#cam');d&&d.remove();cnt();touch()}
+async function snap(k){if(SN)return;if(O._n[k]+NEW[k].length>=10)return alert('Máximo 10 fotos');SN=1;try{let b=null;
+ try{if(window.ImageCapture)b=await new ImageCapture(STM.getVideoTracks()[0]).takePhoto()}catch(e){}
+ if(!b){const m=$('#vd'),c=document.createElement('canvas');c.width=m.videoWidth;c.height=m.videoHeight;c.getContext('2d').drawImage(m,0,0);b=await new Promise(ok=>c.toBlob(ok,'image/jpeg',.95))}
+ NEW[k].push({b,u:URL.createObjectURL(b)});navigator.vibrate&&navigator.vibrate(40);cc(k)}finally{SN=0}}
+// ----- Patrón de desbloqueo -----
+function pat(){const lock=O.id&&/Patr[oó]n:/.test(O.clave||'');PS=secPat($('#clave').value);
+ const d=document.createElement('div');d.id='pat';d.style.cssText='position:fixed;inset:0;background:#000c;z-index:99;display:flex;align-items:center;justify-content:center';
+ d.innerHTML=`<div style="background:#fff;border-radius:16px;padding:14px;text-align:center"><b>Patrón de desbloqueo</b><br><canvas id=pc width=300 height=300 style="touch-action:none;background:#f2f6fb;border-radius:12px;margin:8px 0;max-width:80vw"></canvas>${lock?'<p style="font-size:12px;color:#637386;margin:0">Patrón guardado: no se puede modificar.</p>':`<div class=row><button class="btn s" onclick="PS=[];pd()">Borrar</button><button class="btn g" onclick="patOk()">Usar patrón</button></div>`}<button class="btn s" onclick="$('#pat').remove()">Cerrar</button></div>`;
+ document.body.appendChild(d);const c=$('#pc');pd();
+ const pos=e=>{const r=c.getBoundingClientRect();return[(e.clientX-r.left)*300/r.width,(e.clientY-r.top)*300/r.height]};
+ if(!lock){c.onpointerdown=e=>{c.setPointerCapture(e.pointerId);PS=[];const p=pos(e);hit(p);pd(p)};c.onpointermove=e=>{if(e.buttons){const p=pos(e);hit(p);pd(p)}};c.onpointerup=()=>pd()}}
+const dot=i=>[50+100*(i%3),50+100*Math.floor(i/3)];
+function hit(p){for(let i=0;i<9;i++){const q=dot(i);if(Math.hypot(p[0]-q[0],p[1]-q[1])<34&&!PS.includes(i+1))PS.push(i+1)}}
+function drawPat(x,seq,p,bg){x.clearRect(0,0,300,300);if(bg){x.fillStyle='#fff';x.fillRect(0,0,300,300)}x.strokeStyle='#1769aa';x.lineWidth=6;x.lineCap='round';x.beginPath();seq.forEach((n,j)=>{const q=dot(n-1);j?x.lineTo(...q):x.moveTo(...q)});if(p&&seq.length)x.lineTo(...p);x.stroke();
+ for(let i=0;i<9;i++){const q=dot(i),k=seq.indexOf(i+1);x.beginPath();x.arc(q[0],q[1],k>=0?16:9,0,7);x.fillStyle=k>=0?'#1769aa':'#9fb2c6';x.fill();if(k>=0){x.fillStyle='#fff';x.font='bold 16px Arial';x.textAlign='center';x.fillText(k+1,q[0],q[1]+6)}}}
+const pd=p=>drawPat($('#pc').getContext('2d'),PS,p);
+function patBlob(seq){return new Promise(ok=>{const c=document.createElement('canvas');c.width=c.height=300;drawPat(c.getContext('2d'),seq,null,1);c.toBlob(ok,'image/png')})}
+function patOk(){if(PS.length<2)return alert('Dibuja el patrón uniendo al menos 2 puntos');$('#clave').value='Patrón: '+PS.join('-');$('#pat').remove();touch()}
+// ----- Visor de fotos (solo ver: deslizar, pellizcar, calidad original) -----
+function ver(id){history.pushState({},'');const L=js(O.fotosIn).concat(js(O.fotosOut)),d=document.createElement('div');let n=Math.max(0,L.indexOf(id));d.id='vw';d.style.cssText='position:fixed;inset:0;background:#000;z-index:99;touch-action:none;overflow:hidden';
+ const bt='position:absolute;top:50%;transform:translateY(-50%);color:#fff;font-size:34px;background:#0006;padding:10px 12px;border-radius:10px';
+ d.innerHTML=`<img id=vi style="position:absolute;top:50%;left:50%;max-width:100%;max-height:100%;transform:translate(-50%,-50%)"><div onclick="history.back()" style="position:absolute;top:calc(10px + env(safe-area-inset-top));right:10px;color:#fff;font-weight:700;background:#000b;padding:9px 14px;border-radius:9px">✕ Cerrar</div><div id=vc style="position:absolute;top:calc(14px + env(safe-area-inset-top));left:12px;color:#fff;font-weight:700"></div><div id=vp style="${bt};left:6px">‹</div><div id=vn style="${bt};right:6px">›</div><div id=vt style="position:absolute;bottom:16px;left:0;right:0;text-align:center;color:#fff;font-size:12px">Desliza para cambiar de foto · pellizca para acercar</div>`;
+ document.body.appendChild(d);
+ const im=$('#vi'),Q=new Map();let s=1,x=0,y=0,d0=0,s0=1,sx=0,sy=0;
+ const ap=()=>im.style.transform=`translate(calc(-50% + ${x}px),calc(-50% + ${y}px)) scale(${s})`;
+ const show=k=>{n=Math.min(L.length-1,Math.max(0,k));s=1;x=y=0;ap();const me=n,fid=L[n],vivo=()=>me===n&&$('#vi')===im;$('#vc').textContent=(n+1)+' / '+L.length;let hi=false;
+  urlMini(fid).then(u=>{if(vivo()&&!hi)im.src=u}).catch(()=>{});
+  urlGrande(fid).then(u=>{if(vivo()){hi=true;im.src=u}}).catch(()=>{})};
+ $('#vp').onclick=e=>{e.stopPropagation();show(n-1)};$('#vn').onclick=e=>{e.stopPropagation();show(n+1)};
+ d.onpointerdown=e=>{Q.set(e.pointerId,[e.clientX,e.clientY]);if(Q.size==1){sx=e.clientX;sy=e.clientY}if(Q.size==2){const[a,b]=[...Q.values()];d0=Math.hypot(a[0]-b[0],a[1]-b[1]);s0=s}};
+ d.onpointermove=e=>{if(!Q.has(e.pointerId))return;const o=Q.get(e.pointerId);Q.set(e.pointerId,[e.clientX,e.clientY]);
+  if(Q.size==2){const[a,b]=[...Q.values()];s=Math.min(10,Math.max(1,s0*Math.hypot(a[0]-b[0],a[1]-b[1])/d0))}else if(s>1){x+=e.clientX-o[0];y+=e.clientY-o[1]}ap()};
+ d.onpointerup=d.onpointercancel=e=>{const one=Q.size==1;Q.delete(e.pointerId);if(one&&s<=1){const dx=e.clientX-sx,dy=e.clientY-sy;if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.5)show(n+(dx<0?1:-1))}if(s<=1){s=1;x=y=0;ap()}};
+ d.ondblclick=()=>{s=s>1?1:3;x=y=0;ap()};show(n)}
+// ----- Guardar -----
+async function save(){const d=cur();
+ if(!d.cliente.trim())return alert('Falta el nombre del cliente');
+ if(d.estado==='Entregado'&&O._n.out+NEW.out.length==0&&!confirm('No agregaste fotos de entrega. ¿Guardar así?'))return;
+ $('#sv').disabled=true;const m=t=>{const e=$('#msg');if(e)e.textContent=t};
+ try{m('Guardando datos…');const g0=await run('guardar',d);O.id=g0.id;O.folder=g0.folder;
+  const add={in:[],out:[]},jobs=[],sq=secPat(d.clave);if(sq.length>1&&!O.patron)add.pat=await patBlob(sq);
+  for(const k of ['in','out'])NEW[k].forEach((b,i)=>jobs.push([k,b,i]));const tot=jobs.length;let n=0;
+  const w=async()=>{while(jobs.length){const[k,b,i]=jobs.shift();add[k][i]=b.id||(b.id=await run('foto',g0.folder,k,b.b));LOCAL[b.id]=b.u;m(`Subiendo fotos ${++n}/${tot}…`)}};
+  await Promise.all([w(),w(),w()]);
+  m('Generando PDF…');const x=await run('pdf',g0.id,add);
+  Object.assign(O,d,{id:g0.id,fecha:x.fecha,fotosIn:x.fotosIn,fotosOut:x.fotosOut,pdf:x.pdfId,ticket:'',patron:x.patron});
+  run('lista').then(l=>{R=l;cache()}).catch(()=>{});done(x)}
+ catch(e){m('Error: '+(e.message||e));$('#sv').disabled=false}}
+function done(x){v(`<div class=card style="text-align:center"><h3>✅ ${E(x.id)} guardada</h3><p style="font-size:13px;color:#637386;margin:0">La orden quedó guardada en tu Google Drive.</p></div><div class=card><b>📣 Avisar / Imprimir</b>${btns()}</div><button class="btn s" onclick="history.back()">Volver a órdenes</button><div id=msg></div>`)}
+
+// ===== Arranque =====
+(function(){const vp=ls.get('ver','');if(vp&&vp!==VER)setTimeout(()=>aviso('✨ La app se actualizó a la versión más reciente'),900);ls.set('ver',VER)})();
+history.replaceState({},'');cargarCuenta();
+if(EMAIL&&(AND||(TOK.t&&Date.now()<TOK.exp-60e3)))entrar(false);else login();
+</script></body></html>
