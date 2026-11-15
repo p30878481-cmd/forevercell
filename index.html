@@ -16,7 +16,7 @@ textarea{min-height:70px}.btn{display:block;width:100%;border:0;border-radius:10
 .ph{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}.ph img{width:100%;height:90px;object-fit:cover;border-radius:8px;background:#e6edf4}.ph div{position:relative}
 .x{position:absolute;top:3px;right:3px;background:#c0392b;color:#fff;border-radius:50%;width:24px;height:24px;text-align:center;line-height:24px;font-size:13px}
 .it{padding:12px;border-bottom:1px solid #e6edf4}.b{font-size:11px;background:#e8f1fb;border-radius:20px;padding:3px 8px;font-weight:700}
-.rest{background:#f4f8fc;padding:12px;border-radius:10px;font-weight:800;margin-top:10px}#msg{font-weight:700;color:#1769aa;margin-top:10px}
+.rest{background:#f4f8fc;padding:12px;border-radius:10px;font-weight:800;margin-top:10px}#msg{font-weight:700;color:#1769aa;margin-top:10px;overflow-wrap:anywhere}body{overflow-x:hidden}.card,#toast{overflow-wrap:anywhere}
 nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #dce5ee;display:none;padding-bottom:env(safe-area-inset-bottom);z-index:5}
 nav button{flex:1;border:0;background:none;padding:8px 2px;font-size:11px;font-weight:700;color:#43566b}nav button.on{color:#1769aa;background:#e8f1fb}nav small{display:block;font-weight:400}
 .login{text-align:center;padding:26px 18px;margin-top:24px}.login .lg{width:104px;height:104px;object-fit:contain;border-radius:20px}.login h2{margin:14px 0 4px}.login p{color:#637386;margin:0 0 20px}
@@ -176,7 +176,7 @@ async function leerTodo(){
  const base=SH+SS+'/values:batchGet?';
  const[u,f]=await Promise.all([
   g(base+'ranges='+rango('A1:W')+'&valueRenderOption=UNFORMATTED_VALUE&dateTimeRenderOption=SERIAL_NUMBER'),
-  g(base+'ranges='+rango('C1:C')+'&ranges='+rango('S1:S')+'&valueRenderOption=FORMATTED_STRING')]);
+  g(base+'ranges='+rango('C1:C')+'&ranges='+rango('S1:S')+'&valueRenderOption=FORMATTED_VALUE')]);
  const rows=u.valueRanges[0].values||[],fc=f.valueRanges[0].values||[],fs=f.valueRanges[1].values||[];
  let ancho=0;rows.forEach(r=>{ancho=Math.max(ancho,r.length)});
  if(ancho<NC){ // igual que Code.gs: formato texto en A:W y encabezados completos
@@ -270,7 +270,7 @@ async function foto(folder,k,blob){
  let miniId='';if(mini){try{miniId=(await subirArchivo(mini,{name:'mini_'+base+'.jpg',mimeType:'image/jpeg',parents:[folder]})).id}catch(e){}}
  const meta=(n,t)=>Object.assign({name:n,mimeType:t,parents:[folder]},miniId?{description:miniId}:{});
  let f;try{f=await subirArchivo(blob,meta(base+'.'+ext,tipo))}
- catch(e){if(e.message!=='SIN_LOCATION'&&blob.size<3e6)throw e;f=await subirArchivo(await shrink(blob,3200,.92),meta(base+'.jpg','image/jpeg'))}
+ catch(e){if(e.message!=='SIN_LOCATION'&&blob.size<3e6)throw e;let b2=blob;for(const[mx,q]of[[3200,.92],[2600,.88],[2000,.85]]){b2=await shrink(blob,mx,q);if(b2.size<=4.4e6)break}f=await subirArchivo(b2,meta(base+'.jpg','image/jpeg'))}
  if(mini)MINI[f.id]=mini;return f.id}
 async function pdf(id,add){
  const rows=await leerTodo();RC=rows;const o=rows.find(x=>x.id===id);if(!o)throw new Error('No encontré la orden '+id);
