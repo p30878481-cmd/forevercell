@@ -86,6 +86,7 @@ let SS='',SHID=null,CONFID=null,ROWCOUNT=0,ULTIMA=1,ROOT='',RC=[],YA_CONF=false,
 let SN=0,CFG={},LG='',dirty=false,VIEW=0,FIL='',O={},NEW={in:[],out:[]},R=[],PS=[],STM=null,INTER=false;
 function cargarCuenta(){R=ls.get(K('lst'),[]);CFG=ls.get(K('cfg'),{});SS='';SHID=null;CONFID=null;ROOT='';RC=[];YA_CONF=false;for(const k in METAF)delete METAF[k];hdr()}
 const cache=()=>ls.set(K('lst'),R);
+const papel=()=>String(ls.get('papel','58'))==='80'?80:58; // ancho del rollo de la impresora de tickets (se guarda en cada celular)
 
 // =====================================================================
 //  INICIO DE SESIÓN (Android nativo o Google Identity Services en web)
@@ -427,7 +428,7 @@ async function pdfOrden(o){
  return d.out('Orden '+o.id)}
 // ----- Ticket de compra (80 mm de ancho) -----
 async function pdfTicket(o){
- const W=80,M=4,iw=W-2*M,S=9,LH=3.9,rs=(+o.total||0)-(+o.anticipo||0);
+ const W=papel(),M=W===80?4:3,iw=W-2*M,S=9,LH=3.9,rs=(+o.total||0)-(+o.anticipo||0);
  const logo=CFG.logo?await aJpeg(CFG.logo,300).catch(()=>null):null;
  const it=[];const cen=(t,b,s)=>partir(t,b?'CB':'C',s||S,iw).forEach(x=>it.push(['c',x,b,s||S]));const izq=(t,b)=>partir(t,b?'CB':'C',S,iw).forEach(x=>it.push(['l',x,b,S]));const hr=()=>it.push(['hr']);
  cen(CFG.titulo||TALLER,true,11);cen('TICKET DE COMPRA');cen('Orden '+o.id);cen(o.fecha);hr();
@@ -446,7 +447,7 @@ async function pdfTicket(o){
 // =====================================================================
 const v=h=>{$('#app').innerHTML=h;$('#nav').style.display='none';VIEW=0;window.scrollTo(0,0)};
 document.addEventListener('gesturestart',e=>e.preventDefault());
-onpopstate=()=>{if($('#vw')){$('#vw').remove();return}if($('#cam')){camOff();history.pushState({},'');return}if($('#pat')){$('#pat').remove();history.pushState({},'');return}if(!EMAIL){login();return}go()};
+onpopstate=()=>{if($('#vw')){$('#vw').remove();return}if($('#cam')){camOff();history.pushState({},'');return}if($('#pat')){cerrarPat();history.pushState({},'');return}if(!EMAIL){login();return}go()};
 function touch(){if(O.id&&$('#sv')&&!dirty){dirty=true;$('#sv').textContent='💾 Guardar cambios y actualizar PDF'}}
 $('#app').addEventListener('input',touch);$('#app').addEventListener('change',touch);
 function setCfg(c){CFG=c;ls.set(K('cfg'),c);hdr()}
@@ -464,7 +465,7 @@ async function entrar(inter){INTER=!!inter;const m=t=>{const e=$('#msg');if(e){e
 async function salir(){if(!confirm('¿Cerrar sesión? Tus datos siguen guardados en tu Google Drive.'))return;
  const t=TOK.t,em=EMAIL;
  try{if(AND)AND.cerrarSesion(em,t);else if(window.google&&google.accounts&&google.accounts.oauth2&&t)google.accounts.oauth2.revoke(t,()=>{})}catch(e){}
- try{Object.keys(localStorage).filter(k=>k!=='ver').forEach(k=>localStorage.removeItem(k))}catch(e){}
+ try{Object.keys(localStorage).filter(k=>k!=='ver'&&k!=='papel').forEach(k=>localStorage.removeItem(k))}catch(e){}
  EMAIL='';TOK={t:'',exp:0};R=[];CFG={};SS='';ROOT='';hdr();login('Sesión cerrada. Puedes entrar con la misma u otra cuenta.')}
 
 // ----- Lista de órdenes -----
@@ -491,6 +492,7 @@ function ajustes(){history.pushState({},'');LG='';const hoja=SS?'https://docs.go
  <div class="card aj"><h3>📊 Hoja de Google</h3>${hoja?`<p><a href="#" onclick="abrirUrl('${hoja}');return false">Abrir “${E(HOJA)}”</a></p>`:'<p>Cargando…</p>'}${INFO.hojas>1?`<p class=peq>Encontré ${INFO.hojas} hojas con ese nombre; uso la que se modificó más recientemente.</p>`:''}
  ${carp?`<p><a href="#" onclick="abrirUrl('${carp}');return false">Abrir carpeta de fotos y PDF</a></p>`:''}
  <label>¿Usar otra hoja? Pega aquí su link</label><input id=otra placeholder="https://docs.google.com/spreadsheets/d/..."><button class="btn s" onclick="usarOtra()">Usar esta hoja</button></div>
+ <div class="card aj"><h3>🧾 Impresora de tickets</h3><label>Ancho del papel de tu impresora</label><select id=papel onchange="ls.set('papel',this.value);aviso('Ticket de '+this.value+' mm')"><option value="58" ${papel()===58?'selected':''}>58 mm (la más común en Bluetooth)</option><option value="80" ${papel()===80?'selected':''}>80 mm</option></select><p class=peq>Impresora Bluetooth: instala la app gratuita RawBT, elige ahí tu impresora y luego, al imprimir el ticket, escoge RawBT en la ventana de impresión.</p></div>
  <div class="card aj peq"><p>Versión ${VER} (${ORIGEN})</p><p><a href="privacidad.html">Aviso de privacidad</a></p></div>
  <button class="btn s" onclick="history.back()">Volver</button>`)}
 async function usarOtra(){const t=$('#otra').value.trim(),m=(t.match(/\/d\/([\w-]{20,})/)||t.match(/^([\w-]{30,})$/)||[])[1];if(!m)return alert('Ese link no parece de una hoja de Google.');
@@ -543,7 +545,7 @@ async function tk(){const m=t=>{const e=$('#msg');if(e)e.textContent=t};if(O.tic
  try{const r=await run('ticket',O.id);O.ticket=r.id;const x=R.find(o=>o.id===O.id);if(x){x.ticket=r.id;cache()}document.querySelectorAll('button').forEach(b=>{if(b.textContent==='🧾 Generar ticket')b.textContent='🧾 Previsualizar ticket'});m('');verArchivo(r.id,'ticket_'+O.id+'.pdf')}catch(e){m('Error: '+(e.message||e))}}
 function cancelar(){if(!confirm('¿Marcar esta orden como CANCELADA?'))return;$('#estado').value='Cancelado';touch();save()}
 function docHtml(d,t){const rs=(+d.total||0)-(+d.anticipo||0),lg=CFG.logo?`<img src="${CFG.logo}" style="height:${t=='t'?40:60}px"><br>`:'',ti=E(CFG.titulo||TALLER);
- if(t=='t')return `<style>@page{size:80mm auto;margin:0}</style><div style="font-family:monospace;font-size:12px;width:72mm;margin:auto;padding:3mm 0;color:#000"><div style="text-align:center">${lg}<b>${ti}</b><br>TICKET DE COMPRA<br>${E(d.id)} · ${E(d.fecha)}</div><hr>Cliente: ${E(d.cliente)}<br>Tel: ${E(d.ref1)}<br>Equipo: ${E(d.equipo)}<br>Servicio: ${E(d.falla)}<br>Dejó: ${E(d.accesorios)}<hr>Total: $${E(d.total)}<br>Anticipo: $${E(d.anticipo)}<br><b>Resta: $${rs}</b><hr><div style="text-align:center">Estado: ${E(d.estado)}<br>¡Gracias por su preferencia!</div></div>`;
+ if(t=='t'){const P=papel();return `<style>@page{size:${P}mm auto;margin:0}</style><div style="font-family:monospace;font-size:${P===80?12:11}px;width:${P===80?72:48}mm;margin:auto;padding:3mm 0;color:#000;overflow-wrap:anywhere"><div style="text-align:center">${lg}<b>${ti}</b><br>TICKET DE COMPRA<br>${E(d.id)} · ${E(d.fecha)}</div><hr>Cliente: ${E(d.cliente)}<br>Tel: ${E(d.ref1)}<br>Equipo: ${E(d.equipo)}<br>Servicio: ${E(d.falla)}<br>Dejó: ${E(d.accesorios)}<hr>Total: $${E(d.total)}<br>Anticipo: $${E(d.anticipo)}<br><b>Resta: $${rs}</b><hr><div style="text-align:center">Estado: ${E(d.estado)}<br>¡Gracias por su preferencia!</div></div>`;}
  const fi=js(O.fotosIn),fo=js(O.fotosOut),n=Math.max(fi.length,fo.length),w=n<=4?23.5:18.8,c=EC[d.estado]||'#000';
  const ph=a=>js(a).map(i=>img(i,`style="width:${w}%;aspect-ratio:1;object-fit:cover;margin:.5%;border:1px solid #000"`)).join('')||'<i>Sin fotos</i>',bx=(h,b)=>`<div style="border:1px solid #000;margin-bottom:8px;break-inside:avoid"><div style="border-bottom:1px solid #000;padding:5px 8px;font:bold 11px Arial">${h}</div><div style="padding:8px;font-size:13px">${b}</div></div>`;
  return `<style>@page{margin:0}html,body{background:#fff!important}</style><div style="font-family:Arial,sans-serif;color:#000;padding:7mm"><div style="display:flex;align-items:center;gap:12px;border-bottom:3px solid #000;padding-bottom:8px">${lg}<b style="font-size:22px;flex:1">${ti}</b><div style="text-align:right;font-size:11px">ORDEN DE SERVICIO<br><b style="font-size:18px">${E(d.id)}</b><br>${E(d.fecha)}</div></div><div style="margin:10px 0"><span style="border:2px solid ${c};color:${c};padding:3px 12px;font-size:15px;font-weight:bold">${E(d.estado).toUpperCase()}</span></div>
@@ -551,7 +553,7 @@ function docHtml(d,t){const rs=(+d.total||0)-(+d.anticipo||0),lg=CFG.logo?`<img 
  ${bx('COBRO',`<div style="display:flex;text-align:center"><div style="flex:1">Total<br><b style="font-size:17px">$${E(d.total)}</b></div><div style="flex:1;border-left:1px solid #000">Anticipo<br><b style="font-size:17px">$${E(d.anticipo)}</b></div><div style="flex:1;border-left:1px solid #000;color:${rs>0?'#c00000':'#000'}">Adeudo<br><b style="font-size:19px">$${rs}</b></div></div>`)}
  ${bx('EVIDENCIA FOTOGRÁFICA',`<b>Al recibir (${fi.length})</b><br>${ph(O.fotosIn)}${fo.length||d.notasEntrega?`<br><b>Al entregar (${fo.length})</b> ${E(d.notasEntrega)}<br>${ph(O.fotosOut)}`:''}`)}</div>`}
 let PRB=0;function pr(b){if(PRB)return;PRB=1;b.disabled=true;b.textContent='Abriendo impresión…';setTimeout(()=>{PRB=0;b.disabled=false;b.textContent='🖨 Imprimir'},5000);imprimir()}
-function prn(t){const d=Object.assign({},cur(),{fecha:O.fecha||''});history.pushState({},'');v(`<div class=noprint><button class="btn g" onclick="pr(this)">🖨 Imprimir</button><button class="btn s" onclick="history.back()">Volver</button><p style="font-size:12px;color:#637386">Vista previa de impresión.</p></div><div class=card>${docHtml(d,t)}</div>`);pintar()}
+function prn(t){const d=Object.assign({},cur(),{fecha:O.fecha||''});history.pushState({},'');v(`<div class=noprint><button class="btn g" onclick="pr(this)">🖨 Imprimir</button><button class="btn s" onclick="history.back()">Volver</button><p style="font-size:12px;color:#637386">${t=='t'?'Vista previa del ticket ('+papel()+' mm). Impresora Bluetooth: en la ventana de impresión elige <b>RawBT</b>. El ancho se cambia en ⚙️ Ajustes.':'Vista previa de impresión.'}</p></div><div class=card>${docHtml(d,t)}</div>`);pintar()}
 function calc(){const r=(+$('#total').value||0)-(+$('#anticipo').value||0);$('#rest').textContent='Resta por pagar: $'+r}
 function cnt(){['in','out'].forEach(k=>{const e=$('#c'+k);if(e)e.textContent=(O._n[k]+NEW[k].length)+'/10';const g2=$('#n'+k);if(g2)g2.innerHTML=NEW[k].map((x,i)=>`<div><img src="${x.u}"><b class=x onclick="del('${k}',${i})">✕</b></div>`).join('')})}
 const del=(k,i)=>{URL.revokeObjectURL(NEW[k][i].u);NEW[k].splice(i,1);cnt();touch()};
@@ -567,20 +569,42 @@ async function snap(k){if(SN)return;if(O._n[k]+NEW[k].length>=10)return alert('M
  try{if(window.ImageCapture)b=await new ImageCapture(STM.getVideoTracks()[0]).takePhoto()}catch(e){}
  if(!b){const m=$('#vd'),c=document.createElement('canvas');c.width=m.videoWidth;c.height=m.videoHeight;c.getContext('2d').drawImage(m,0,0);b=await new Promise(ok=>c.toBlob(ok,'image/jpeg',.95))}
  NEW[k].push({b,u:URL.createObjectURL(b)});navigator.vibrate&&navigator.vibrate(40);cc(k)}finally{SN=0}}
-// ----- Patrón de desbloqueo -----
-function pat(){const lock=O.id&&/Patr[oó]n:/.test(O.clave||'');PS=secPat($('#clave').value);
- const d=document.createElement('div');d.id='pat';d.style.cssText='position:fixed;inset:0;background:#000c;z-index:99;display:flex;align-items:center;justify-content:center';
- d.innerHTML=`<div style="background:#fff;border-radius:16px;padding:14px;text-align:center"><b>Patrón de desbloqueo</b><br><canvas id=pc width=300 height=300 style="touch-action:none;background:#f2f6fb;border-radius:12px;margin:8px 0;max-width:80vw"></canvas>${lock?'<p style="font-size:12px;color:#637386;margin:0">Patrón guardado: no se puede modificar.</p>':`<div class=row><button class="btn s" onclick="PS=[];pd()">Borrar</button><button class="btn g" onclick="patOk()">Usar patrón</button></div>`}<button class="btn s" onclick="$('#pat').remove()">Cerrar</button></div>`;
- document.body.appendChild(d);const c=$('#pc');pd();
- const pos=e=>{const r=c.getBoundingClientRect();return[(e.clientX-r.left)*300/r.width,(e.clientY-r.top)*300/r.height]};
- if(!lock){c.onpointerdown=e=>{c.setPointerCapture(e.pointerId);PS=[];const p=pos(e);hit(p);pd(p)};c.onpointermove=e=>{if(e.buttons){const p=pos(e);hit(p);pd(p)}};c.onpointerup=()=>pd()}}
+// ----- Patrón de desbloqueo: una sola ventana a la vez; con el dedo (deslizar o tocar punto por punto) o con mouse; la página de atrás no se mueve -----
+let PATW=null;
+const leePat=s=>((String(s||'').match(/Patr[oó]n:\s*([\d-]+)/)||[])[1]||'').split('-').filter(Boolean).map(Number).filter(n=>n>=1&&n<=9);
+function fondoFijo(si){document.documentElement.style.overflow=si?'hidden':'';document.body.style.overflow=si?'hidden':''}
+function cerrarPat(){document.querySelectorAll('#pat').forEach(x=>x.remove());PATW=null;fondoFijo(false)}
+function pat(){
+ if(PATW&&PATW.parentNode)return; // ya está abierta: no se abre otra encima
+ cerrarPat();
+ const lock=!!(O.id&&/Patr[oó]n:/.test(O.clave||''));PS=leePat($('#clave').value);
+ const d=document.createElement('div');d.id='pat';
+ d.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.8);z-index:99;display:flex;align-items:center;justify-content:center;touch-action:none;-webkit-user-select:none;user-select:none';
+ d.innerHTML='<div style="background:#fff;border-radius:16px;padding:14px;text-align:center;width:92%;max-width:360px"><b>Patrón de desbloqueo</b><p style="font-size:12px;color:#637386;margin:4px 0 0">'+(lock?'Patrón guardado: no se puede modificar.':'Desliza el dedo o toca los puntos en orden. “Borrar” empieza de nuevo.')+'</p><canvas width="300" height="300" style="display:block;touch-action:none;background:#f2f6fb;border-radius:12px;margin:8px auto;width:100%;max-width:300px;height:auto"></canvas>'+(lock?'':'<div class="row"><button class="btn s" data-a="borrar">Borrar</button><button class="btn g" data-a="usar">Usar patrón</button></div>')+'<button class="btn s" data-a="cerrar">Cerrar</button></div>';
+ document.body.appendChild(d);PATW=d;fondoFijo(true);
+ const c=d.querySelector('canvas'),g=c.getContext('2d'),dib=p=>drawPat(g,PS,p);dib();
+ const pos=(x,y)=>{const r=c.getBoundingClientRect();return[(x-r.left)*300/r.width,(y-r.top)*300/r.height]};
+ let activo=false;
+ const ini=(x,y)=>{if(lock)return;activo=true;const p=pos(x,y);sumaPunto(p);dib(p)};
+ const mov=(x,y)=>{if(lock||!activo)return;const p=pos(x,y);sumaPunto(p);dib(p)};
+ const fin=()=>{if(!activo)return;activo=false;dib()};
+ const enBoton=e=>!!(e.target&&e.target.closest&&e.target.closest('button'));
+ d.addEventListener('touchstart',e=>{if(enBoton(e))return;e.preventDefault();const t=e.changedTouches[0];ini(t.clientX,t.clientY)},{passive:false});
+ d.addEventListener('touchmove',e=>{e.preventDefault();const t=e.changedTouches[0];mov(t.clientX,t.clientY)},{passive:false});
+ d.addEventListener('touchend',e=>{if(!enBoton(e))e.preventDefault();fin()},{passive:false});
+ d.addEventListener('touchcancel',fin);
+ d.addEventListener('mousedown',e=>{if(!enBoton(e))ini(e.clientX,e.clientY)});
+ d.addEventListener('mousemove',e=>{if(e.buttons&1)mov(e.clientX,e.clientY)});
+ d.addEventListener('mouseup',fin);d.addEventListener('mouseleave',fin);
+ d.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('button');if(!b)return;const a=b.getAttribute('data-a');if(a==='borrar'){PS=[];dib()}else if(a==='usar')patOk();else if(a==='cerrar')cerrarPat()})}
+// Igual que Android: si saltas un punto que queda en medio (1→3), ese punto se agrega solo
+const enMedio=(a,b)=>{const ra=Math.floor((a-1)/3),ca=(a-1)%3,rb=Math.floor((b-1)/3),cb=(b-1)%3;if((ra+rb)%2||(ca+cb)%2)return 0;const m=(ra+rb)/2*3+(ca+cb)/2+1;return m!==a&&m!==b?m:0};
+function sumaPunto(p){for(let i=0;i<9;i++){const q=dot(i),n=i+1;if(Math.hypot(p[0]-q[0],p[1]-q[1])<42&&!PS.includes(n)){const u=PS[PS.length-1],m=u?enMedio(u,n):0;if(m&&!PS.includes(m))PS.push(m);PS.push(n);try{navigator.vibrate&&navigator.vibrate(12)}catch(e){}}}}
+function patOk(){if(PS.length<2)return alert('Dibuja el patrón uniendo al menos 2 puntos');$('#clave').value='Patrón: '+PS.join('-');cerrarPat();touch()}
 const dot=i=>[50+100*(i%3),50+100*Math.floor(i/3)];
-function hit(p){for(let i=0;i<9;i++){const q=dot(i);if(Math.hypot(p[0]-q[0],p[1]-q[1])<34&&!PS.includes(i+1))PS.push(i+1)}}
 function drawPat(x,seq,p,bg){x.clearRect(0,0,300,300);if(bg){x.fillStyle='#fff';x.fillRect(0,0,300,300)}x.strokeStyle='#1769aa';x.lineWidth=6;x.lineCap='round';x.beginPath();seq.forEach((n,j)=>{const q=dot(n-1);j?x.lineTo(...q):x.moveTo(...q)});if(p&&seq.length)x.lineTo(...p);x.stroke();
  for(let i=0;i<9;i++){const q=dot(i),k=seq.indexOf(i+1);x.beginPath();x.arc(q[0],q[1],k>=0?16:9,0,7);x.fillStyle=k>=0?'#1769aa':'#9fb2c6';x.fill();if(k>=0){x.fillStyle='#fff';x.font='bold 16px Arial';x.textAlign='center';x.fillText(k+1,q[0],q[1]+6)}}}
-const pd=p=>drawPat($('#pc').getContext('2d'),PS,p);
 function patBlob(seq){return new Promise(ok=>{const c=document.createElement('canvas');c.width=c.height=300;drawPat(c.getContext('2d'),seq,null,1);c.toBlob(ok,'image/png')})}
-function patOk(){if(PS.length<2)return alert('Dibuja el patrón uniendo al menos 2 puntos');$('#clave').value='Patrón: '+PS.join('-');$('#pat').remove();touch()}
 // ----- Visor de fotos (solo ver: deslizar, pellizcar, calidad original) -----
 function ver(id){history.pushState({},'');const L=js(O.fotosIn).concat(js(O.fotosOut)),d=document.createElement('div');let n=Math.max(0,L.indexOf(id));d.id='vw';d.style.cssText='position:fixed;inset:0;background:#000;z-index:99;touch-action:none;overflow:hidden';
  const bt='position:absolute;top:50%;transform:translateY(-50%);color:#fff;font-size:34px;background:#0006;padding:10px 12px;border-radius:10px';
